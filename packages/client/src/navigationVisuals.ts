@@ -52,33 +52,6 @@ function curveAtLongitude(longitude: number, radius: number): Vector3[] {
   return points;
 }
 
-function createStars(scene: Scene): Mesh {
-  // Deterministic procedural stars: a single draw call rather than hundreds of tiny meshes.
-  let seed = 0x41339;
-  const random = () => {
-    seed = (1664525 * seed + 1013904223) >>> 0;
-    return seed / 0x100000000;
-  };
-  const lines: Vector3[][] = [];
-  for (let index = 0; index < 1250; index++) {
-    const azimuth = random() * Math.PI * 2;
-    const altitude = Math.asin(random() * 2 - 1);
-    const distance = 430 + random() * 2250;
-    const center = new Vector3(
-      distance * Math.cos(altitude) * Math.sin(azimuth),
-      distance * Math.sin(altitude),
-      distance * Math.cos(altitude) * Math.cos(azimuth)
-    );
-    const length = 0.8 + random() * 2;
-    lines.push([center, center.add(new Vector3(length, length * 0.4, 0))]);
-  }
-  const stars = MeshBuilder.CreateLineSystem("fixed-stars", { lines }, scene);
-  stars.color = new Color3(0.67, 0.79, 1);
-  stars.alpha = 0.8;
-  stars.isPickable = false;
-  return stars;
-}
-
 function createGrid(scene: Scene): TransformNode {
   const node = new TransformNode("navigation-grid-root", scene);
   const lines: Vector3[][] = [];
@@ -215,7 +188,6 @@ function createSphere(scene: Scene) {
 }
 
 export function createNavigationVisuals(scene: Scene) {
-  const stars = createStars(scene);
   const grid = createGrid(scene);
   const beaconsRoot = createBeacons(scene);
   const sphere = createSphere(scene);
@@ -264,7 +236,6 @@ export function createNavigationVisuals(scene: Scene) {
     }
 
     // The background follows the vessel at astronomical scale; reference objects do not.
-    stars.position.copyFrom(renderPosition);
     beaconsRoot.position.copyFrom(renderOrigin.scale(-1));
     grid.setEnabled(options.aids);
     grid.position.set(
