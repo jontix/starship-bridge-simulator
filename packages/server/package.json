@@ -1,0 +1,1 @@
+{"name":"@bridge-sim/server","version":"0.0.1","type":"module","scripts":{"dev":"tsx watch src/index.ts","build":"tsc"},"dependencies":{"@bridge-sim/shared":"0.0.1","@colyseus/schema":"^3.0.42","colyseus":"^0.16.4","cors":"^2.8.5","express":"^4.21.2"},"devDependencies":{"@types/cors":"^2.8.17","@types/express":"^5.0.1","tsx":"^4.19.4","typescript":"^5.8.3"}}
