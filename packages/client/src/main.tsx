@@ -197,6 +197,11 @@ function App() {
         {showSystemMap && <SystemMap
           snapshot={snapshot}
           onClose={() => setShowSystemMap(false)}
+          onFocusBody={bodyId => {
+            setPlanetFocusId(bodyId);
+            setCameraMode("planet");
+            setShowSystemMap(false);
+          }}
           onPlotCourse={role === "helm" && room ? targetId => {
             room.send("cruise_command", { type: "set_cruise_target", targetId });
             setShowSystemMap(false);
