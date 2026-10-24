@@ -1,7 +1,7 @@
 import {
   Color3, Color4, Engine, FreeCamera, Mesh, MeshBuilder, Quaternion,
-  Scene, StandardMaterial, TransformNode, Vector3,
-  type Camera, type Material
+  Scene, ShaderMaterial, StandardMaterial, TransformNode, Vector3,
+  type Camera
 } from "@babylonjs/core";
 import {
   add, apparentBodyGeometry, choosePlanetFocus, discDiameterPixels,
@@ -190,23 +190,18 @@ export function createPlanetaryBackground(engine: Engine) {
       if (!globe.loaded && pixelDiameter >= 3.5) {
         const textures = generatePlanetTextures(sky, body);
         const old = globe.surface.material;
-        globe.surface.material = surfaceMaterial(sky, body, textures);
+        const litSurface = surfaceMaterial(sky, body, textures);
+        globe.surface.material = litSurface;
         old?.dispose();
-        const surface = globe.surface.material;
-        if (surface && "setVector3" in surface) globe.sunMaterials.push(surface as {
-          setVector3: (name: string, value: Vector3) => unknown
-        });
+        globe.sunMaterials.push(litSurface);
         if (globe.clouds) {
-          globe.clouds.material = cloudMaterial(sky, body, textures);
+          const litClouds = cloudMaterial(sky, body, textures);
+          globe.clouds.material = litClouds;
           globe.clouds.setEnabled(true);
-          globe.sunMaterials.push(globe.clouds.material as {
-            setVector3: (name: string, value: Vector3) => unknown
-          });
+          globe.sunMaterials.push(litClouds);
         }
-        if (globe.atmosphere) {
-          globe.sunMaterials.push(globe.atmosphere.material as {
-            setVector3: (name: string, value: Vector3) => unknown
-          });
+        if (globe.atmosphere?.material instanceof ShaderMaterial) {
+          globe.sunMaterials.push(globe.atmosphere.material);
         }
         globe.loaded = true;
       }
