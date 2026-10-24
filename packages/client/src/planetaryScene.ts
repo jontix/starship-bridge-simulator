@@ -152,7 +152,8 @@ export function createPlanetaryBackground(engine: Engine) {
     cameraOffsetMetres: Vec3,
     focusedBodyId: string,
     viewportHeightPx: number,
-    aidsVisible: boolean
+    aidsVisible: boolean,
+    showPhysicalGlobes = true
   ) => {
     const system = getStarSystem(snapshot.universe.systemId);
     prepare(system);
@@ -170,6 +171,15 @@ export function createPlanetaryBackground(engine: Engine) {
     for (const body of system.bodies) {
       const globe = globes.get(body.id);
       if (!globe) continue;
+      // Tactical overhead is an instrument display, not an orbital photograph.
+      // Suppress vast true-scale globe proxies so local grids and contacts
+      // remain legible even 430km above a planet. Other cameras stay physical.
+      if (!showPhysicalGlobes) {
+        globe.root.setEnabled(false);
+        globe.glint.setEnabled(false);
+        globe.corona?.setEnabled(false);
+        continue;
+      }
       const distanceVector = sub(positions[body.id], cameraSystemPosition);
       const distance = length(distanceVector);
       if (distance < 1) {
