@@ -106,6 +106,30 @@ Interplanetary cruise, star-to-star jumps, orbital gravity and physical collisio
 See [First Star System architecture and test plan](docs/first-star-system.md).
 New systems are registered in `packages/shared/src/universe/registry.ts`.
 
+## Milestone 2B: Interplanetary Cruise
+
+The `feature/interplanetary-cruise` branch adds a **third-person, server-authoritative
+interplanetary drive** to Aster Reach without changing the existing impulse
+ship handling:
+
+- Plot a planet, moon or station from **Helm** or **System Map (M)**.
+- Engage an effective FTL cruise drive after a four-second spool.
+- Flight computer tracks the moving Keplerian destination, accelerates,
+  decelerates, and exits to a local reference frame near the target.
+- Throttle, ETA, course progress and safe manual drop controls at Helm.
+- Main Screen shares real-time voyage telemetry, cinematic star streaks,
+  and a moving route line on the system map.
+- Up to **3c** effective cruise speed for testing; this is intentionally
+  fictional travel technology, not Newtonian thrust.
+- Impulse commands are locked while in cruise; they resume on return to
+  local space. Interstellar jumps come later.
+
+**Quick test:** Choose **Selene Observatory** (a short trip from the initial
+Haven Highport), press **Plot destination**, then **Engage interplanetary
+cruise** and follow the moving system-map marker.
+
+See [Interplanetary Cruise notes and test plan](docs/interplanetary-cruise.md).
+
 ## Monorepo
 
 - `packages/shared` — flight math, simulation, commands and tests
