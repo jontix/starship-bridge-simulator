@@ -287,7 +287,11 @@ export function MainScene({
         const up = Vector3.Up().subtract(planetUnit.scale(Vector3.Dot(planetUnit, Vector3.Up())));
         if (up.lengthSquared() < 0.001) up.copyFrom(Vector3.Right());
         up.normalize();
-        const framingOffset = Math.max(0, Math.min(1.43, angularRadius - 0.17));
+        const isTelescope = propsRef.current.mode === "planet" && propsRef.current.opticalZoom >= 4;
+        // Telescope targets the resolved surface/disc itself. At 1x, frame the
+        // limb and ship together for a cinematic but still accurate panorama.
+        const framingOffset = isTelescope ? 0 :
+          Math.max(0, Math.min(1.43, angularRadius - 0.17));
         const planetAimDirection = planetUnit.scale(Math.cos(framingOffset))
           .add(up.scale(Math.sin(framingOffset))).normalize();
         // Position the camera *behind this aim direction*, not behind the
@@ -299,7 +303,6 @@ export function MainScene({
           planetCamera.position, renderPosition.add(cameraArm), follow
         );
         planetCamera.setTarget(renderPosition.add(planetAimDirection.scale(10_000)));
-        const isTelescope = propsRef.current.mode === "planet" && propsRef.current.opticalZoom >= 4;
         // Physical planet radius, range and angular diameter never change.
         // Magnification narrows the *optical field of view*; when telescopic,
         // hide local ship/station silhouettes to simulate a dedicated sensor.
