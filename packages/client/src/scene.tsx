@@ -42,7 +42,13 @@ function interpolatedPose(samples: Sample[], target: number) {
   ));
   return {
     position: Vector3.Lerp(toVector(before.snapshot.ship.position), toVector(after.snapshot.ship.position), fraction),
-    orientation: Quaternion.Slerp(toQuaternion(before.snapshot.ship.orientation), toQuaternion(after.snapshot.ship.orientation), fraction)
+    orientation: Quaternion.Slerp(toQuaternion(before.snapshot.ship.orientation), toQuaternion(after.snapshot.ship.orientation), fraction),
+    cruisePosition: Vector3.Lerp(
+      toVector(before.snapshot.cruise.positionSystemMeters),
+      toVector(after.snapshot.cruise.positionSystemMeters), fraction
+    ),
+    epochSeconds: before.snapshot.universe.epochSeconds +
+      (after.snapshot.universe.epochSeconds - before.snapshot.universe.epochSeconds) * fraction
   };
 }
 
@@ -197,6 +203,23 @@ export function MainScene({
       const pose = interpolatedPose(samplesRef.current, performance.now() - INTERPOLATION_DELAY_MS);
       const latest = latestRef.current;
       if (pose && latest) {
+        // Planet directions must interpolate the astronomical cruise position,
+        // not step at the server's 15 Hz snapshot rate. Keep these visual
+        // samples separate from authoritative movement or Helm controls.
+        const visualSnapshot: GameSnapshot = {
+          ...latest,
+          universe: { ...latest.universe, epochSeconds: pose.epochSeconds },
+          ship: {
+            ...latest.ship,
+            position: { x: pose.position.x, y: pose.position.y, z: pose.position.z }
+          },
+          cruise: {
+            ...latest.cruise,
+            positionSystemMeters: {
+              x: pose.cruisePosition.x, y: pose.cruisePosition.y, z: pose.cruisePosition.z
+            }
+          }
+        };
         const frameKey = latest.universe.referenceBodyId + ":" +
           (latest.cruise.mode === "local" ? "local" : "cruise");
         if (frameKey !== lastRenderFrameKey) {
@@ -242,9 +265,9 @@ export function MainScene({
           liveSystem, latest.universe.referenceBodyId, latest.cruise.targetId,
           propsRef.current.planetFocusId
         );
-        const absoluteShip = shipPositionFromSnapshot(liveSystem, latest);
+        const absoluteShip = shipPositionFromSnapshot(liveSystem, visualSnapshot);
         const bodySystemPosition = bodyPositionAt(
-          liveSystem, focusedWorld.id, latest.universe.epochSeconds
+          liveSystem, focusedWorld.id, visualSnapshot.universe.epochSeconds
         );
         const focusDirection = normalize(sub(bodySystemPosition, absoluteShip));
         const cameraArm = toVector(rotateVector(q, vec3(0, 32, -145)));
@@ -278,7 +301,7 @@ export function MainScene({
         const activeCamera = scene.activeCamera!;
         const cameraOffset = activeCamera.globalPosition.subtract(renderPosition);
         planetarySky.update(
-          latest, activeCamera, { x: cameraOffset.x, y: cameraOffset.y, z: cameraOffset.z },
+          visualSnapshot, activeCamera, { x: cameraOffset.x, y: cameraOffset.y, z: cameraOffset.z },
           propsRef.current.planetFocusId, engine.getRenderHeight(),
           propsRef.current.showNavigationAids
         );
