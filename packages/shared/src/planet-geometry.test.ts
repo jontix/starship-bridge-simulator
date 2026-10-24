@@ -52,6 +52,10 @@ test("visual definitions are system-data reusable and physically bounded", () =>
   assert.ok((bastion.appearance?.rings?.innerRadiusRatio ?? 0) > 1);
   assert.ok((bastion.appearance?.rings?.outerRadiusRatio ?? 0) >
     (bastion.appearance?.rings?.innerRadiusRatio ?? 0));
+  const bastionStation = ASTER_REACH.bodies.find(body => body.id === "bastion-platform")!;
+  assert.ok((bastionStation.orbit?.semiMajorAxisMeters ?? 0) >
+    bastion.radiusMeters * (bastion.appearance?.rings?.outerRadiusRatio ?? Infinity),
+    "orbital station should not sit within the physical radial extent of Bastion's rings");
 
   const invalidSystem = {
     ...ASTER_REACH,
