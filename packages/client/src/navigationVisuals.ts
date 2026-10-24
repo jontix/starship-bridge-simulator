@@ -181,6 +181,32 @@ function createSphere(scene: Scene) {
   const ordered = marker("engaged-command-amber", new Color3(1, 0.59, 0.18), 3.6);
   const bow = marker("actual-bow-white", new Color3(1, 1, 1), 3.1);
 
+  // Fixed compass labels make world-space orientation understandable from any camera angle.
+  const compassLabels = [
+    { name: "000° / +Z", position: new Vector3(0, 0, SPHERE_RADIUS + 9) },
+    { name: "090° / +X", position: new Vector3(SPHERE_RADIUS + 9, 0, 0) },
+    { name: "180° / -Z", position: new Vector3(0, 0, -SPHERE_RADIUS - 9) },
+    { name: "270° / -X", position: new Vector3(-SPHERE_RADIUS - 9, 0, 0) },
+    { name: "UP +Y", position: new Vector3(0, SPHERE_RADIUS + 9, 0) },
+    { name: "DOWN -Y", position: new Vector3(0, -SPHERE_RADIUS - 9, 0) }
+  ];
+  for (const [index, label] of compassLabels.entries()) {
+    const texture = new DynamicTexture("heading-label-text-" + index, { width: 384, height: 72 }, scene, true);
+    texture.hasAlpha = true;
+    texture.drawText(label.name, null, 51, "bold 43px monospace", "#a6ebff", "transparent", true);
+    const material = new StandardMaterial("heading-label-material-" + index, scene);
+    material.diffuseTexture = texture;
+    material.useAlphaFromDiffuseTexture = true;
+    material.disableLighting = true;
+    material.backFaceCulling = false;
+    const plane = MeshBuilder.CreatePlane("heading-label-" + index, { width: 29, height: 5.5 }, scene);
+    plane.billboardMode = Mesh.BILLBOARDMODE_ALL;
+    plane.material = material;
+    plane.position.copyFrom(label.position);
+    plane.parent = root;
+    plane.isPickable = false;
+  }
+
   root.setEnabled(false);
   return { root, pickSurface, selected, ordered, bow };
 }
