@@ -17,15 +17,15 @@ import type { CelestialBody } from "@bridge-sim/shared";
  * The names intentionally use a celestial BODY id, so the same renderer
  * supports a catalog of unrelated star systems without special-casing Haven.
  */
-const textures = import.meta.glob<{ default: string }>(
+const textures = import.meta.glob(
   "./assets/planets/*/*.{png,jpg,jpeg,webp}",
   { eager: true, query: "?url", import: "default" }
-);
+) as Record<string, string>;
 
 function locate(bodyId: string, channel: string): string | null {
   const prefix = "./assets/planets/" + bodyId + "/" + channel + ".";
   for (const [path, resource] of Object.entries(textures)) {
-    if (path.startsWith(prefix)) return resource.default;
+    if (path.startsWith(prefix)) return resource;
   }
   return null;
 }
