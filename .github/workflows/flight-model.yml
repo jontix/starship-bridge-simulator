@@ -24,3 +24,4 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: node scripts/smoke-server.mjs
+      - run: node scripts/smoke-universe.mjs
