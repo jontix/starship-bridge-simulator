@@ -1,12 +1,13 @@
-import { DynamicTexture, type Scene } from "@babylonjs/core";
+import { DynamicTexture, type BaseTexture, type Scene } from "@babylonjs/core";
 import type { CelestialBody, PlanetAppearance } from "@bridge-sim/shared";
 import { fictionalOceanTerrain } from "./havenGeography";
 import { craterField } from "./craterTerrain";
 
 export type PlanetTextures = {
-  surface: DynamicTexture;
-  night: DynamicTexture | null;
-  clouds: DynamicTexture | null;
+  // Can be either generated DynamicTextures or cached/curated PNG Textures.
+  surface: BaseTexture;
+  night: BaseTexture | null;
+  clouds: BaseTexture | null;
 };
 
 /** Deterministic 3D value noise avoids the visible longitude seam common to
