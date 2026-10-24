@@ -10,7 +10,8 @@ import {
 } from "@bridge-sim/shared";
 import { atmosphereMaterial, cloudMaterial, placeholderMaterial, surfaceMaterial, starMaterial } from "./planetMaterials";
 import { generatePlanetTextures, createPrecomputedPlanetPlaceholders } from "./planetTextures";
-import { attachAuthoredPlanetTextures, hasBundledPlanetAssets } from "./planetAssetOverrides";
+import { attachAuthoredPlanetTextures, hasBundledPlanetAssets, getGeneratedPlanetSeed } from "./planetAssetOverrides";
+import { gpuDetailSeed, SURFACE_DETAIL_FACTORS, type SurfaceDetailMode } from "./surfaceDetail";
 import { createPlanetRings } from "./planetRings";
 import { createStellarCorona, updateStellarCorona } from "./stellarEffects";
 
@@ -28,6 +29,7 @@ type Globe = {
   glint: Mesh;
   corona: Mesh | null;
   loaded: boolean;
+  detailSeed: Vector3;
   sunMaterials: { setVector3: (name: string, value: Vector3) => unknown }[];
 };
 
@@ -110,9 +112,10 @@ function createGlobe(scene: Scene, body: CelestialBody): Globe {
   glint.isPickable = false;
   glint.setEnabled(false);
   root.setEnabled(false);
+  const seed = gpuDetailSeed(getGeneratedPlanetSeed(body));
   return {
     root, surface, globeRotation, cloudRotation, clouds, atmosphere,
-    glint, corona, loaded: false, sunMaterials: []
+    glint, corona, detailSeed: toVector(seed), loaded: false, sunMaterials: []
   };
 }
 
@@ -153,7 +156,8 @@ export function createPlanetaryBackground(engine: Engine) {
     focusedBodyId: string,
     viewportHeightPx: number,
     aidsVisible: boolean,
-    showPhysicalGlobes = true
+    showPhysicalGlobes = true,
+    detailMode: SurfaceDetailMode = "high"
   ) => {
     const system = getStarSystem(snapshot.universe.systemId);
     prepare(system);
@@ -248,6 +252,23 @@ export function createPlanetaryBackground(engine: Engine) {
       const lightVector = sub(sunPosition, positions[body.id]);
       const sunDirection = toVector(length(lightVector) > 1 ? normalize(lightVector) : { x: 1, y: 0, z: 0 });
       for (const material of globe.sunMaterials) material.setVector3("sunDirection", sunDirection);
+      // Each local pixel corresponds to a different physical distance near
+      // the horizon. The shader reconstructs the exact projected footprint
+      // from vWorldPosition and these camera parameters; not a fixed altitude.
+      const archetype = body.appearance?.archetype;
+      const supported = archetype === "ocean" || archetype === "rocky" ||
+        archetype === "airless";
+      const strength = supported ? SURFACE_DETAIL_FACTORS[detailMode] : 0;
+      const pixelRadians = 2 * Math.tan(camera.fov * 0.5) /
+        Math.max(viewportHeightPx, 1);
+      for (const mesh of [globe.surface, globe.clouds]) {
+        if (!(mesh?.material instanceof ShaderMaterial)) continue;
+        mesh.material.setFloat("detailStrength", strength);
+        mesh.material.setFloat("detailScale", 1);
+        mesh.material.setFloat("detailPixelRadians", pixelRadians);
+        mesh.material.setFloat("detailProxyRadius", geometry.proxyRadiusMetres);
+        mesh.material.setVector3("detailSeed", globe.detailSeed);
+      }
       if (body.appearance?.archetype === "stellar" && globe.surface.material instanceof ShaderMaterial) {
         // Slow convection animation in day-sized simulation time units.
         const seconds = snapshot.universe.epochSeconds - system.epochUnixSeconds;
