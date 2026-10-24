@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "npm --prefix packages/shared run build && concurrently \"npm --prefix packages/server run dev\" \"npm --prefix packages/client run dev\" \"npm --prefix packages/shared run dev\"",
     "build": "npm --prefix packages/shared run build && npm --prefix packages/server run build && npm --prefix packages/client run build",
-    "test": "npm --prefix packages/shared run test && node --test scripts/planet-generator/*.test.mjs",
+    "test": "npm --prefix packages/shared run test && node --test scripts/planet-generator/generator.test.mjs",
     "check:server": "node scripts/smoke-server.mjs",
     "generate:planets": "node scripts/planet-generator/cli.mjs --preset haven",
     "predev": "node scripts/planet-generator/cli.mjs --preset haven --if-missing",
