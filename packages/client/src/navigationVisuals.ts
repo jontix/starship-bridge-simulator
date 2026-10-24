@@ -312,7 +312,12 @@ export function createNavigationVisuals(scene: Scene) {
     }
   };
 
-  return { pickHeading, update };
+  const resetTrail = () => {
+    history.length = 0;
+    lastTraceTick = -1;
+    trail.setEnabled(false);
+  };
+  return { pickHeading, update, resetTrail };
 }
 
 /** Decorative thrust visualization, not an input to the simulation. */
