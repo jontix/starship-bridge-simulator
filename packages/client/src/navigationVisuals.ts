@@ -95,11 +95,13 @@ function createGrid(scene: Scene): TransformNode {
   return node;
 }
 
-function createBeacons(scene: Scene): void {
+function createBeacons(scene: Scene): TransformNode {
+  const beaconsRoot = new TransformNode("world-navigation-beacons", scene);
   const ringMaterial = emissive(scene, "nav-beacon-rings", new Color3(0.16, 0.85, 1));
   const coreMaterial = emissive(scene, "nav-beacon-core", new Color3(1, 0.71, 0.35));
   for (const beacon of NAV_MARKERS) {
     const root = new TransformNode(`beacon-${beacon.id}`, scene);
+    root.parent = beaconsRoot;
     root.position.copyFrom(toVector(beacon.position));
     const core = MeshBuilder.CreateSphere(`beacon-${beacon.id}-core`, { diameter: 7, segments: 12 }, scene);
     core.material = coreMaterial;
@@ -130,6 +132,7 @@ function createBeacons(scene: Scene): void {
     label.parent = root;
     label.isPickable = false;
   }
+  return beaconsRoot;
 }
 
 function createSphere(scene: Scene) {
@@ -214,7 +217,7 @@ function createSphere(scene: Scene) {
 export function createNavigationVisuals(scene: Scene) {
   const stars = createStars(scene);
   const grid = createGrid(scene);
-  createBeacons(scene);
+  const beaconsRoot = createBeacons(scene);
   const sphere = createSphere(scene);
 
   const zeroes = Array.from({ length: 5 }, () => Vector3.Zero());
@@ -241,10 +244,12 @@ export function createNavigationVisuals(scene: Scene) {
   };
 
   const update = (
-    pose: VisualPose, ship: ShipState, tick: number,
+    pose: VisualPose, ship: ShipState, tick: number, renderOrigin: Vector3,
     options: { sphere: boolean; aids: boolean; selected: SelectedHeading }
   ) => {
-    sphere.root.position.copyFrom(pose.position);
+    // All GPU coordinates are local-metre coordinates relative to a nearby origin.
+    const renderPosition = pose.position.subtract(renderOrigin);
+    sphere.root.position.copyFrom(renderPosition);
     sphere.root.setEnabled(options.sphere);
     if (options.sphere) {
       const selectedDirection = headingToDirection(angle(options.selected.yaw), angle(options.selected.pitch));
@@ -258,24 +263,29 @@ export function createNavigationVisuals(scene: Scene) {
       sphere.bow.position.copyFrom(forward.normalize().scale(SPHERE_RADIUS - 0.5));
     }
 
-    // Celestial field follows loosely; translating creates mild parallax at high speed.
-    stars.position.copyFrom(pose.position.scale(0.78));
+    // The background follows the vessel at astronomical scale; reference objects do not.
+    stars.position.copyFrom(renderPosition);
+    beaconsRoot.position.copyFrom(renderOrigin.scale(-1));
     grid.setEnabled(options.aids);
-    grid.position.set(Math.round(pose.position.x / 200) * 200, -45, Math.round(pose.position.z / 200) * 200);
+    grid.position.set(
+      Math.round(pose.position.x / 200) * 200 - renderOrigin.x,
+      -45 - renderOrigin.y,
+      Math.round(pose.position.z / 200) * 200 - renderOrigin.z
+    );
     velocity.setEnabled(options.aids);
     trail.setEnabled(options.aids);
 
     const speed = Math.hypot(ship.velocity.x, ship.velocity.y, ship.velocity.z);
     if (speed > 0.1) {
       const forward = toVector(ship.velocity).normalize();
-      const end = pose.position.add(forward.scale(Math.max(6, Math.min(155, speed * 0.8))));
+      const end = renderPosition.add(forward.scale(Math.max(6, Math.min(155, speed * 0.8))));
       let side = Vector3.Cross(forward, Vector3.Up());
       if (side.lengthSquared() < 0.001) side = Vector3.Cross(forward, Vector3.Right());
       side.normalize().scaleInPlace(5);
       const back = forward.scale(10);
       MeshBuilder.CreateLines("world-velocity-vector", {
         points: [
-          pose.position, end,
+          renderPosition, end,
           end.subtract(back).add(side),
           end,
           end.subtract(back).subtract(side)
@@ -290,8 +300,13 @@ export function createNavigationVisuals(scene: Scene) {
       lastTraceTick = tick;
       history.push(pose.position.clone());
       if (history.length > traceCapacity) history.shift();
+    }
+    // Rebuild display-relative vertices on EVERY render frame, including after a rebase.
+    // History itself is retained in stable double-precision LOCAL simulation coordinates.
+    if (history.length) {
       const points = Array.from({ length: traceCapacity }, (_, index) =>
-        (history[Math.max(0, history.length - traceCapacity + index)] ?? history[history.length - 1]).clone()
+        (history[Math.max(0, history.length - traceCapacity + index)] ?? history[history.length - 1])
+          .subtract(renderOrigin)
       );
       MeshBuilder.CreateLines("ship-flight-history", { points, instance: trail }, scene);
     }
