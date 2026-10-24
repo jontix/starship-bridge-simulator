@@ -21,6 +21,7 @@ export type PlanetAppearance = {
   rotationPeriodSeconds: number;
   atmosphere?: { colorHex: string; thicknessMeters: number };
   clouds?: { altitudeMeters: number; coverage: number };
+  rings?: { innerRadiusRatio: number; outerRadiusRatio: number; colorHex: string };
 };
 
 export type CelestialBody = {
