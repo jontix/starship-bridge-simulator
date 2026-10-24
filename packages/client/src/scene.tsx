@@ -3,14 +3,19 @@ import {
   ArcRotateCamera, Color3, Engine, FreeCamera, HemisphericLight, MeshBuilder,
   PointerEventTypes, Quaternion, Scene, StandardMaterial, Vector3
 } from "@babylonjs/core";
-import { computeFloatingOrigin, getStarSystem, rotateVector, vec3, type GameSnapshot, type Quat } from "@bridge-sim/shared";
+import {
+  bodyPositionAt, choosePlanetFocus, computeFloatingOrigin, getStarSystem,
+  normalize, rotateVector, scale, shipPositionFromSnapshot, sub, vec3,
+  type GameSnapshot, type Quat
+} from "@bridge-sim/shared";
 import {
   attachEngineEffects, createNavigationVisuals,
   type PickedHeading, type SelectedHeading
 } from "./navigationVisuals";
-import { createDistantBodyMarkers, createReferenceStation } from "./celestialScene";
+import { createReferenceStation } from "./celestialScene";
+import { createPlanetaryBackground } from "./planetaryScene";
 
-export type CameraMode = "orbit" | "chase" | "tactical" | "sector";
+export type CameraMode = "orbit" | "chase" | "tactical" | "sector" | "planet";
 type Sample = { snapshot: GameSnapshot; receivedAt: number };
 const INTERPOLATION_DELAY_MS = 115;
 
@@ -48,20 +53,21 @@ type MainSceneProps = {
   showNavigationAids: boolean;
   selectedHeading: SelectedHeading;
   onHeadingPicked: (heading: PickedHeading) => void;
+  planetFocusId: string;
 };
 
 export function MainScene({
   snapshot, mode, showHeadingSphere, showNavigationAids,
-  selectedHeading, onHeadingPicked
+  selectedHeading, onHeadingPicked, planetFocusId
 }: MainSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const samplesRef = useRef<Sample[]>([]);
   const latestRef = useRef(snapshot);
   latestRef.current = snapshot;
   const propsRef = useRef({
-    mode, showHeadingSphere, showNavigationAids, selectedHeading, onHeadingPicked
+    mode, showHeadingSphere, showNavigationAids, selectedHeading, onHeadingPicked, planetFocusId
   });
-  propsRef.current = { mode, showHeadingSphere, showNavigationAids, selectedHeading, onHeadingPicked };
+  propsRef.current = { mode, showHeadingSphere, showNavigationAids, selectedHeading, onHeadingPicked, planetFocusId };
 
   useEffect(() => {
     if (!snapshot) { samplesRef.current = []; return; }
@@ -84,18 +90,24 @@ export function MainScene({
     if (!canvas) return;
     const engine = new Engine(canvas, true);
     const scene = new Scene(engine);
+    const planetarySky = createPlanetaryBackground(engine);
+    // Sky first, then clear depth (but NOT colour) before rendering local
+    // ship/station geometry: a projection proxy planet cannot clip a station.
+    scene.autoClear = false;
+    scene.autoClearDepthAndStencil = true;
     scene.clearColor.set(0.008, 0.011, 0.024, 1);
     const orbit = new ArcRotateCamera("orbit", -Math.PI / 4, Math.PI / 2.75, 78, Vector3.Zero(), scene);
     const tactical = new ArcRotateCamera("tactical", -Math.PI / 4, 0.47, 245, Vector3.Zero(), scene);
     const sector = new ArcRotateCamera("sector", -Math.PI / 4, Math.PI / 2.8, 560, Vector3.Zero(), scene);
     const chase = new FreeCamera("chase", new Vector3(0, 20, -85), scene);
+    const planetCamera = new FreeCamera("planet-orbital-view", new Vector3(0, 30, -145), scene);
     orbit.lowerRadiusLimit = 62;
     orbit.upperRadiusLimit = 650;
     tactical.lowerRadiusLimit = 80;
     tactical.upperRadiusLimit = 900;
     sector.lowerRadiusLimit = 140;
     sector.upperRadiusLimit = 1500;
-    for (const camera of [orbit, tactical, sector, chase]) camera.maxZ = 12000;
+    for (const camera of [orbit, tactical, sector, chase, planetCamera]) camera.maxZ = 12000;
 
     let selectedCamera: CameraMode | null = null;
     let spherePreviouslyVisible = false;
@@ -105,7 +117,8 @@ export function MainScene({
         scene.activeCamera?.detachControl();
         selectedCamera = wanted;
         scene.activeCamera = wanted === "chase" ? chase :
-        wanted === "tactical" ? tactical : wanted === "sector" ? sector : orbit;
+          wanted === "planet" ? planetCamera :
+          wanted === "tactical" ? tactical : wanted === "sector" ? sector : orbit;
         if (wanted !== "chase") scene.activeCamera.attachControl(canvas, true);
       }
       if (propsRef.current.showHeadingSphere !== spherePreviouslyVisible) {
@@ -148,7 +161,6 @@ export function MainScene({
     const plumes = attachEngineEffects(scene, ship);
     const nav = createNavigationVisuals(scene);
     const orbitalStation = createReferenceStation(scene);
-    const celestialSky = createDistantBodyMarkers(scene);
     // Stylised ship-relative star streaks, only a visual feedback cue for
     // effective cruise velocity (not literal nearby stars or 3D travel distance).
     let rng = 423143;
@@ -205,6 +217,7 @@ export function MainScene({
           tactical.target.addInPlace(shift);
           sector.target.addInPlace(shift);
           chase.position.addInPlace(shift);
+          planetCamera.position.addInPlace(shift);
           renderOrigin.copyFrom(nextOrigin);
         }
         const renderPosition = pose.position.subtract(renderOrigin);
@@ -224,6 +237,22 @@ export function MainScene({
         chase.upVector.copyFrom(toVector(rotateVector(q, vec3(0, 1, 0))));
         const lookAhead = toVector(rotateVector(q, vec3(0, 0, 60)));
         chase.setTarget(renderPosition.add(lookAhead));
+        const liveSystem = getStarSystem(latest.universe.systemId);
+        const focusedWorld = choosePlanetFocus(
+          liveSystem, latest.universe.referenceBodyId, latest.cruise.targetId,
+          propsRef.current.planetFocusId
+        );
+        const absoluteShip = shipPositionFromSnapshot(liveSystem, latest);
+        const bodySystemPosition = bodyPositionAt(
+          liveSystem, focusedWorld.id, latest.universe.epochSeconds
+        );
+        const focusDirection = normalize(sub(bodySystemPosition, absoluteShip));
+        const cameraArm = toVector(rotateVector(q, vec3(0, 32, -145)));
+        planetCamera.position = Vector3.Lerp(
+          planetCamera.position, renderPosition.add(cameraArm), follow
+        );
+        const planetAim = toVector(scale(focusDirection, 10_000));
+        planetCamera.setTarget(renderPosition.add(planetAim));
         const local = latest.cruise.mode === "local";
         nav.update(pose, latest.ship, latest.tick, renderOrigin, {
           sphere: local && propsRef.current.showHeadingSphere,
@@ -235,7 +264,13 @@ export function MainScene({
           getStarSystem(latest.universe.systemId), latest.universe.referenceBodyId,
           latest.universe.frameOffsetMeters, renderOrigin, local
         );
-        celestialSky.update(latest, renderPosition, propsRef.current.showNavigationAids);
+        const activeCamera = scene.activeCamera!;
+        const offset = activeCamera.globalPosition.subtract(renderPosition);
+        planetarySky.update(
+          latest, activeCamera, { x: offset.x, y: offset.y, z: offset.z },
+          propsRef.current.planetFocusId, engine.getRenderHeight(),
+          propsRef.current.showNavigationAids
+        );
         const cruiseSpeed = latest.cruise.speedMetersPerSecond;
         streaks.setEnabled(!local && cruiseSpeed > 5_000);
         if (!local && cruiseSpeed > 5_000) {
@@ -243,6 +278,7 @@ export function MainScene({
           streaks.position.z = ((performance.now() / 12) % 450) - 225;
         }
       }
+      planetarySky.render();
       scene.render();
     });
 
@@ -252,6 +288,7 @@ export function MainScene({
       window.removeEventListener("resize", resize);
       if (pickObserver) scene.onPointerObservable.remove(pickObserver);
       scene.dispose();
+      planetarySky.dispose();
       engine.dispose();
     };
   }, []);
