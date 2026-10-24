@@ -139,6 +139,10 @@ function App() {
           <span className="system-map-toggle-label">☉ {liveSystem.name}</span>
           <span className="system-map-toggle-action">System Map <kbd>M</kbd></span>
         </button>
+        <a className="planet-lab-toplink" href="/planet-lab.html"
+          title="Develop and inspect deterministic planetary surface maps">
+          <span aria-hidden="true">◉ </span>Planet Lab
+        </a>
         <label className="role-select">
           Station
           <select value={role} onChange={(event) => setRole(event.target.value as PlayerRole)}>
