@@ -65,8 +65,12 @@ void main(void) {
   vec3 albedo = pow(max(texel.rgb, vec3(0.0)), vec3(2.15));
   float sun = max(0.0, cosSun);
   float terminator = smoothstep(-0.04, 0.06, cosSun);
-  float illumination = 0.012 + terminator * (0.035 + 1.08 * sun);
+  // Artistic exposure floor approximating reflected skylight and starshine:
+  // the actual illuminated side remains much brighter, but the planet does
+  // not disappear entirely from a dark orbital night view.
+  float illumination = 0.16 + terminator * (0.055 + 1.05 * sun);
   vec3 lit = albedo * illumination;
+  lit += (1.0 - terminator) * vec3(0.0015, 0.0029, 0.0052);
 
   // Separate ocean reflectance data lives in the G channel of the night map.
   // Rough, dim land; tight, coloured, star-reflecting ocean specularity.
@@ -234,14 +238,19 @@ void main(void) {
   float granulation = noise3(p * 80.0 + vec3(tick * 0.04, 0, tick * 0.02));
   float convection = noise3(p * 19.0 + vec3(0.0, tick * 0.07, 0.0));
   float spots = noise3(p * 8.0 + vec3(tick * 0.008, 0.0, 0.0));
-  float spotMask = 1.0 - smoothstep(0.17, 0.31, spots);
-  float cellular = 0.63 + 0.34 * granulation + 0.13 * convection;
-  float limb = 0.43 + 0.57 * pow(mu, 0.49);
-  vec3 base = texture2D(surfaceSampler, vUV).rgb;
-  vec3 colour = mix(vec3(1.0,0.45,0.11), vec3(1.0,0.92,0.59), granulation);
-  colour *= mix(0.16, 1.0, 1.0 - spotMask * stellarActivity);
+  // Rare, modestly dark sunspots instead of the large dark continents that
+  // made the v1 star resemble a cratered orange planet.
+  float spotMask = 1.0 - smoothstep(0.08, 0.16, spots);
+  float fineGrain = noise3(p * 145.0 + vec3(tick * 0.06, 0, 0));
+  float cellular = 0.88 + 0.18 * granulation + 0.10 * convection +
+    0.06 * fineGrain;
+  float limb = 0.51 + 0.49 * pow(mu, 0.49);
+  vec3 colour = mix(vec3(1.0,0.78,0.46), vec3(1.0,0.96,0.77),
+    smoothstep(0.20, 0.88, granulation));
+  colour *= mix(0.51, 1.0, 1.0 - spotMask * stellarActivity);
   colour *= cellular * limb;
-  colour = mix(colour, base * 0.89 * limb, 0.21);
+  // Artist surface maps may supply broad tonal variation later. Generated
+  // v1 texture spots are deliberately not composited over the v2 stellar disc.
   gl_FragColor = vec4(colour, 1.0);
 }
 `;
@@ -296,7 +305,7 @@ export function starMaterial(scene: Scene, body: CelestialBody, textures: Planet
   const material = shader(scene, body.id + "-stellar-v2", "Stellar");
   material.setTexture("surfaceSampler", textures.surface);
   material.setFloat("stellarTime", 0);
-  material.setFloat("stellarActivity", 0.83);
+  material.setFloat("stellarActivity", 0.55);
   return material;
 }
 
