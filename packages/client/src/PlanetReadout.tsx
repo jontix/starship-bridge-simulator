@@ -1,6 +1,7 @@
 import {
-  apparentBodyGeometry, bodyPositionAt, choosePlanetFocus,
-  formatAstronomicalDistance, getStarSystem, shipPositionFromSnapshot,
+  apparentBodyGeometry, choosePlanetFocus,
+  formatAstronomicalDistance, getStarSystem, lineOfSightBlocker,
+  shipPositionFromSnapshot, systemPositionsAt,
   type GameSnapshot
 } from "@bridge-sim/shared";
 
@@ -17,9 +18,11 @@ export function PlanetViewControls({
   const system = getStarSystem(snapshot.universe.systemId);
   const body = choosePlanetFocus(system, snapshot.universe.referenceBodyId,
     snapshot.cruise.targetId, focusId);
-  const positions = bodyPositionAt(system, body.id, snapshot.universe.epochSeconds);
+  const positions = systemPositionsAt(system, snapshot.universe.epochSeconds);
+  const worldPosition = positions[body.id];
   const ship = shipPositionFromSnapshot(system, snapshot);
-  const geometry = apparentBodyGeometry(body.radiusMeters, positions, ship);
+  const geometry = apparentBodyGeometry(body.radiusMeters, worldPosition, ship);
+  const blocker = lineOfSightBlocker(system, positions, ship, body.id);
   const angularDiameter = geometry.apparentAngularRadiusRadians * 360 / Math.PI;
 
   return <div className="planet-view-controls">
@@ -49,7 +52,15 @@ export function PlanetViewControls({
         ? "Below surface (no collision yet)"
         : formatAstronomicalDistance(geometry.altitudeMeters)}</strong></div>
       <div><span>Apparent diameter</span><strong>{angularDiameter.toFixed(2)}°</strong></div>
+      <div><span>Centre sightline</span><strong>{blocker
+        ? "Blocked by " + blocker.name
+        : "Clear"}</strong></div>
     </div>
+    {blocker && <p className="subtle" role="status">
+      {body.name} centre sightline blocked by {blocker.name}.
+      The selected world may be fully or partially hidden behind this closer body;
+      change course or continue observing as orbital positions evolve.
+    </p>}
     <p className="subtle planet-view-hint">
       Globes have actual angular scale in 3D. System Map icons remain schematic.
       Select <strong>Planet / orbital</strong> camera for a dedicated world-facing view.
