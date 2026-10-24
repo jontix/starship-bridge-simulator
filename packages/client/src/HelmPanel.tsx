@@ -4,6 +4,7 @@ import { attitudeFromQuat, length, type GameSnapshot } from "@bridge-sim/shared"
 import type { CameraMode } from "./scene";
 import { CruisePanel } from "./CruisePanel";
 import { PlanetViewControls } from "./PlanetReadout";
+import type { SurfaceDetailMode } from "./surfaceDetail";
 import type { SelectedHeading } from "./navigationVisuals";
 import { BeaconList, CameraSelector, Control, degrees, driftAngle, number, Telemetry, toRadians } from "./navigationUI";
 
@@ -23,12 +24,14 @@ type HelmPanelProps = {
   setPlanetFocusId: (id: string) => void;
   opticalZoom: number;
   setOpticalZoom: (value: number) => void;
+  surfaceDetailMode: SurfaceDetailMode;
+  setSurfaceDetailMode: (mode: SurfaceDetailMode) => void;
 };
 
 export function HelmPanel({
   room, snapshot, cruiseNotice, heading, setHeading,
   showSphere, toggleSphere, showAids, toggleAids, mode, setMode,
-  planetFocusId, setPlanetFocusId, opticalZoom, setOpticalZoom
+  planetFocusId, setPlanetFocusId, opticalZoom, setOpticalZoom, surfaceDetailMode, setSurfaceDetailMode
 }: HelmPanelProps) {
   const [speed, setSpeed] = useState(0);
   const [strafe, setStrafe] = useState(0);
@@ -63,7 +66,8 @@ export function HelmPanel({
       <PlanetViewControls snapshot={snapshot} focusId={planetFocusId}
         setFocusId={id => { setPlanetFocusId(id); setMode("planet"); }}
         opticalZoom={opticalZoom}
-        setOpticalZoom={zoom => { setOpticalZoom(zoom); setMode("planet"); }}/>
+        setOpticalZoom={zoom => { setOpticalZoom(zoom); setMode("planet"); }}
+        surfaceDetailMode={surfaceDetailMode} setSurfaceDetailMode={setSurfaceDetailMode}/>
       <p className="subtle instruction">
         Click the world-aligned sphere to choose a heading. Set attitude sends it to the ship.
         Roll remains independently controlled.
