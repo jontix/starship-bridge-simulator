@@ -38,12 +38,27 @@ export const quatFromAxisAngle = (axis: Vec3, radians: number): Quat => {
 };
 
 // World +Y up, ship +Z forward, ship +X starboard.
-// Attitude command is intrinsic yaw (Y), pitch (X), roll (Z).
+// Positive pitch raises the bow; positive roll drops the starboard side.
+// Intrinsic yaw (Y), pitch (-X), roll (-Z) in ship coordinates.
 export const quatFromAttitude = (yaw: number, pitch: number, roll: number): Quat =>
   normalizeQuat(quatMultiply(
-    quatMultiply(quatFromAxisAngle(vec3(0, 1, 0), yaw), quatFromAxisAngle(vec3(1, 0, 0), pitch)),
-    quatFromAxisAngle(vec3(0, 0, 1), roll)
+    quatMultiply(quatFromAxisAngle(vec3(0, 1, 0), yaw), quatFromAxisAngle(vec3(1, 0, 0), -pitch)),
+    quatFromAxisAngle(vec3(0, 0, 1), -roll)
   ));
+
+// Used for the Helm attitude readout. The underlying physics never uses Euler angles.
+export const attitudeFromQuat = (q: Quat): { yaw: number; pitch: number; roll: number } => {
+  const forwardX = 2 * (q.x * q.z + q.w * q.y);
+  const forwardY = 2 * (q.y * q.z - q.w * q.x);
+  const forwardZ = 1 - 2 * (q.x * q.x + q.y * q.y);
+  const rightY = 2 * (q.x * q.y + q.w * q.z);
+  const upY = 1 - 2 * (q.x * q.x + q.z * q.z);
+  return {
+    yaw: Math.atan2(forwardX, forwardZ),
+    pitch: Math.asin(clamp(forwardY, -1, 1)),
+    roll: Math.atan2(-rightY, upY)
+  };
+};
 export const rotateVector = (q: Quat, v: Vec3): Vec3 => {
   const r = quatMultiply(quatMultiply(q, { ...v, w: 0 }), quatConjugate(q));
   return vec3(r.x, r.y, r.z);
