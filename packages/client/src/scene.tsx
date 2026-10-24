@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import {
-  ArcRotateCamera, Color3, Engine, FreeCamera, HemisphericLight, MeshBuilder,
+  ArcRotateCamera, Color3, Engine, FreeCamera, MeshBuilder,
   PointerEventTypes, Quaternion, Scene, StandardMaterial, Vector3
 } from "@babylonjs/core";
 import {
@@ -14,6 +14,7 @@ import {
 } from "./navigationVisuals";
 import { createReferenceStation } from "./celestialScene";
 import { createPlanetaryBackground } from "./planetaryScene";
+import { createSpaceLighting, upgradeShipAppearance } from "./shipLighting";
 
 export type CameraMode = "orbit" | "chase" | "tactical" | "sector" | "planet";
 type Sample = { snapshot: GameSnapshot; receivedAt: number };
@@ -134,11 +135,10 @@ export function MainScene({
       }
     };
 
-    new HemisphericLight("ambient", new Vector3(0.4, 1, 0.2), scene).intensity = 0.85;
+    const illumination = createSpaceLighting(scene);
     const ship = MeshBuilder.CreateBox("ship-hull", { width: 8, height: 3, depth: 18 }, scene);
     ship.rotationQuaternion = Quaternion.Identity();
-    const hullMaterial = new StandardMaterial("hull-material", scene);
-    hullMaterial.diffuseColor = new Color3(0.45, 0.72, 1);
+    const hullMaterial = upgradeShipAppearance(scene, ship);
     ship.material = hullMaterial;
     ship.isPickable = false;
 
@@ -266,8 +266,15 @@ export function MainScene({
           propsRef.current.planetFocusId
         );
         const absoluteShip = shipPositionFromSnapshot(liveSystem, visualSnapshot);
+        const starId = liveSystem.bodies.find(body => body.kind === "star")?.id;
+        const starPosition = starId
+          ? bodyPositionAt(liveSystem, starId, visualSnapshot.universe.epochSeconds)
+          : { x: 0, y: 0, z: 0 };
         const bodySystemPosition = bodyPositionAt(
           liveSystem, focusedWorld.id, visualSnapshot.universe.epochSeconds
+        );
+        illumination.update(
+          absoluteShip, starPosition, bodySystemPosition, focusedWorld.radiusMeters
         );
         const focusDirection = normalize(sub(bodySystemPosition, absoluteShip));
         // In low orbit the planet subtends >100 degrees: aim near the limb
