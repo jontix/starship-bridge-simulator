@@ -98,6 +98,9 @@ try {
     const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
     return Boolean(gl) && !gl.isContextLost();
   });
+  if (shaderFailures.length || runtimeErrors.length) {
+    console.error("WEBGL DIAGNOSTIC TRACE\n" + browserLog.slice(-300).join("\n"));
+  }
   assert.ok(gpuReady, "Babylon must retain a valid WebGL context");
   assert.equal(shaderFailures.length, 0, "Babylon shader compilation errors:\n" + shaderFailures.join("\n"));
   assert.equal(runtimeErrors.length, 0, "Browser console/page errors:\n" + runtimeErrors.join("\n"));
