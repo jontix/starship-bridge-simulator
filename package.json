@@ -14,7 +14,8 @@
   "devDependencies": {
     "concurrently": "^9.0.0",
     "typescript": "^5.8.3",
-    "playwright": "^1.56.1"
+    "playwright": "^1.56.1",
+    "pngjs": "^7.0.0"
   },
   "engines": {
     "node": ">=20.19.0",
