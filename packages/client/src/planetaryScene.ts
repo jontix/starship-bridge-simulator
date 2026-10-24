@@ -10,6 +10,7 @@ import {
 } from "@bridge-sim/shared";
 import { atmosphereMaterial, cloudMaterial, placeholderMaterial, surfaceMaterial, starMaterial } from "./planetMaterials";
 import { generatePlanetTextures } from "./planetTextures";
+import { attachAuthoredPlanetTextures } from "./planetAssetOverrides";
 import { createPlanetRings } from "./planetRings";
 import { createStellarCorona, updateStellarCorona } from "./stellarEffects";
 
@@ -215,12 +216,14 @@ export function createPlanetaryBackground(engine: Engine) {
         globe.surface.material = litSurface;
         old?.dispose();
         globe.sunMaterials.push(litSurface);
+        let litClouds: ShaderMaterial | null = null;
         if (globe.clouds) {
-          const litClouds = cloudMaterial(sky, body, textures);
+          litClouds = cloudMaterial(sky, body, textures);
           globe.clouds.material = litClouds;
           globe.clouds.setEnabled(true);
           globe.sunMaterials.push(litClouds);
         }
+        attachAuthoredPlanetTextures(sky, body, litSurface, litClouds);
         if (globe.atmosphere?.material instanceof ShaderMaterial) {
           globe.sunMaterials.push(globe.atmosphere.material);
         }
