@@ -75,7 +75,7 @@ Aster Reach defines:
 - Haven: ocean world, polar regions, continents, city lights at night,
   independently moving clouds, and a blue atmospheric limb
 - Selene: mottled airless grey satellite
-- Bastion: textured rotating gas bands and storms
+- Bastion: textured rotating gas bands, storms and concentric physical-scale rings
 - Tundra: blue/cyan icy atmospheric bands
 
 The surface generator uses **deterministic 3D fractal noise sampled on a
@@ -93,6 +93,9 @@ actual star direction to show sunlight and a true day/night terminator.
 Haven also has an ocean specular contribution and a city-light mask that
 appears primarily on the night side. Clouds rotate slightly independently
 of the surface, and an atmosphere shell contributes a light-dependent rim.
+
+Bastion's annular rings are flat radial bands defined as multiples of its true
+planet radius, and follow the same precise angular projection as the globe.
 
 No full volumetric atmospheric scattering, surface bump tessellation,
 surface landing physics, or high-resolution terrain yet. These would be
