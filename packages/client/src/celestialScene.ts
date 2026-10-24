@@ -3,8 +3,8 @@ import {
   StandardMaterial, TransformNode, Vector3
 } from "@babylonjs/core";
 import {
-  getBody, getStarSystem, localShipToSystemPosition, systemPositionsAt,
-  length, sub, normalize, scale, type GameSnapshot, type StarSystem
+  getBody, getStarSystem, shipPositionFromSnapshot, systemPositionsAt,
+  length, sub, normalize, scale, type GameSnapshot, type StarSystem, type Vec3
 } from "@bridge-sim/shared";
 
 function light(scene: Scene, name: string, hex: string, alpha = 1): StandardMaterial {
@@ -79,14 +79,16 @@ export function createReferenceStation(scene: Scene) {
   const dockingLabel = label(scene, "LOCAL FRAME STATION", root, 59, 86);
 
   return {
-    update(system: StarSystem, originMetres: Vector3, visible: boolean) {
-      const parent = getBody(system, system.start.referenceBodyId);
-      root.setEnabled(visible && parent.kind === "station");
+    update(system: StarSystem, referenceBodyId: string, frameOffset: Vec3,
+      originMetres: Vector3, visible: boolean) {
+      const parent = getBody(system, referenceBodyId);
+      const range = length(frameOffset);
+      root.setEnabled(visible && parent.kind === "station" && range < 40_000);
       if (!root.isEnabled()) return;
       root.position.set(
-        -system.start.offsetFromReferenceMeters.x - originMetres.x,
-        -system.start.offsetFromReferenceMeters.y - originMetres.y,
-        -system.start.offsetFromReferenceMeters.z - originMetres.z
+        -frameOffset.x - originMetres.x,
+        -frameOffset.y - originMetres.y,
+        -frameOffset.z - originMetres.z
       );
       dockingLabel.isVisible = visible;
     }
@@ -129,7 +131,7 @@ export function createDistantBodyMarkers(scene: Scene) {
       }
       markersRoot.setEnabled(aidsVisible);
       if (!aidsVisible) return;
-      const absoluteShip = localShipToSystemPosition(system, snapshot.ship.position, snapshot.universe.epochSeconds);
+      const absoluteShip = shipPositionFromSnapshot(system, snapshot);
       const positions = systemPositionsAt(system, snapshot.universe.epochSeconds);
       for (const body of system.bodies) {
         const node = icons.get(body.id);
