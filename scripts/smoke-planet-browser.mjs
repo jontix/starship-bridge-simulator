@@ -54,7 +54,13 @@ async function stop(child) {
 
 let browser;
 try {
-  start(process.execPath, ["packages/server/dist/index.js"], "Colyseus", { PORT: "2567" });
+  // Anchor the orbital station to a reproducible sun-facing orbital phase:
+  // at the actual run time the star can be legitimately behind Haven.
+  const regressionEpoch = Date.UTC(2026, 9, 24, 20, 0, 0) / 1000;
+  start(process.execPath, ["packages/server/dist/index.js"], "Colyseus", {
+    PORT: "2567",
+    BRIDGE_TEST_START_EPOCH_SECONDS: String(regressionEpoch)
+  });
   start("npm", ["--prefix", "packages/client", "run", "dev", "--",
     "--host", "127.0.0.1", "--port", "5173", "--strictPort"], "Vite");
   await health("http://127.0.0.1:2567/health");
@@ -111,6 +117,9 @@ try {
 
   await page.getByLabel("Focused planet").selectOption("aster");
   await page.getByLabel("Optical magnification").selectOption("32");
+  await page.getByText("Centre sightline").locator("..").getByText("Clear").waitFor({
+    timeout: 10_000
+  });
   await sleep(3200);
   assert.equal(shaderFailures.length, 0, "Aster shader compilation errors:\n" + shaderFailures.join("\n"));
   assert.equal(runtimeErrors.length, 0, "Aster console errors:\n" + runtimeErrors.join("\n"));
@@ -131,7 +140,8 @@ try {
     }
   }
   assert.ok(warmDiscPixels > 180,
-    "32x telescope star not visibly in frame; warm disc pixel count=" + warmDiscPixels);
+    "Unobstructed 32x Aster telescope failed to show a stellar disc; warm pixels=" +
+    warmDiscPixels);
   console.log("Captured resolved Aster stellar disc:", star, "warm pixels=", warmDiscPixels);
   await context.close();
   console.log("Planetary browser smoke passed: both shaders, connected multiplayer session, valid WebGL and screenshots");
