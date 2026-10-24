@@ -10,6 +10,7 @@ import { ASTER_REACH } from "./universe/aster-reach.js";
 import { bodyPositionAt, localShipToSystemPosition, solveEccentricAnomaly, systemPositionsAt, cameraRelativeMetres } from "./universe/orbits.js";
 import { getBody, getStarSystem, listStarSystems, validateStarSystem } from "./universe/registry.js";
 import { METRES_PER_AU, SECONDS_PER_DAY } from "./universe/units.js";
+import { computeFloatingOrigin, localToRenderPosition } from "./universe/floating-origin.js";
 
 const tick = 1 / 30;
 const advance = (ship: ReturnType<typeof createInitialShipState>, seconds: number) => {
@@ -194,4 +195,26 @@ test("start frame positions stay astronomically precise while preserving local m
   near(length(sub(recovered, local)), 0, 0.0001);
   const snapshot = systemPositionsAt(ASTER_REACH, time);
   assert.ok(Object.values(snapshot).every(pos => Number.isFinite(pos.x) && Number.isFinite(pos.y) && Number.isFinite(pos.z)));
+});
+
+test("floating origin preserves metre detail after a long local manoeuvre", () => {
+  const shipPosition = vec3(7_654_321.235, -20_000.125, 98_765_431.875);
+  const origin = computeFloatingOrigin(shipPosition);
+  const render = localToRenderPosition(shipPosition, origin);
+  assert.ok(Math.abs(render.x) <= 1024 && Math.abs(render.y) <= 1024 && Math.abs(render.z) <= 1024);
+  near(length(sub(vec3(render.x + origin.x, render.y + origin.y, render.z + origin.z), shipPosition)), 0, 0.000001);
+  const second = computeFloatingOrigin(vec3(shipPosition.x + 5000, shipPosition.y, shipPosition.z));
+  const moved = localToRenderPosition(shipPosition, second);
+  near(length(sub(vec3(moved.x + second.x, moved.y + second.y, moved.z + second.z), shipPosition)), 0, 0.000001);
+});
+
+test("all orbital elements are finite across centuries and hierarchical stations follow", () => {
+  for (const yearsFromEpoch of [-300, -10, 0, 10, 300]) {
+    const epoch = ASTER_REACH.epochUnixSeconds + yearsFromEpoch * 365.256 * SECONDS_PER_DAY;
+    const positions = systemPositionsAt(ASTER_REACH, epoch);
+    assert.equal(Object.keys(positions).length, ASTER_REACH.bodies.length);
+    assert.ok(Object.values(positions).every(p => [p.x,p.y,p.z].every(Number.isFinite)));
+    near(length(sub(positions["selene-observatory"], positions.selene)), 1_950_000, 0.01);
+    near(length(sub(positions["bastion-platform"], positions.bastion)), 105_000_000, 1_050_000);
+  }
 });
