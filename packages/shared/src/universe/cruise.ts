@@ -4,7 +4,7 @@ import {
 } from "../math.js";
 import { stepShipAttitude } from "../simulation.js";
 import type { ShipState } from "../types.js";
-import { bodyPositionAt, localShipToSystemPosition } from "./orbits.js";
+import { bodyPositionAt } from "./orbits.js";
 import { getBody } from "./registry.js";
 import type { CelestialBody, StarSystem } from "./types.js";
 
@@ -29,6 +29,8 @@ export type CruiseState = {
   etaSeconds: number | null;
   arrivalDistanceMeters: number | null;
   progress: number;                        // 0–1, approximate
+  initialDistanceMeters: number;
+  approachDirection: Vec3;                 // fixed safe side relative to destination
   spoolRemainingSeconds: number;
   lastEvent: string;
 };
@@ -57,6 +59,8 @@ export function createCruiseState(): CruiseState {
     etaSeconds: null,
     arrivalDistanceMeters: null,
     progress: 0,
+    initialDistanceMeters: 0,
+    approachDirection: vec3(0, 0, 1),
     spoolRemainingSeconds: 0,
     lastEvent: "Local impulse controls available"
   };
@@ -135,6 +139,8 @@ export function beginCruise(
   state.remainingMeters = distance - standoff;
   state.arrivalDistanceMeters = standoff;
   state.progress = 0;
+  state.initialDistanceMeters = state.remainingMeters;
+  state.approachDirection = normalize(sub(shipPosition, targetPosition));
   state.etaSeconds = estimateTravelSeconds(state.remainingMeters, 0, state.throttle);
   state.lastEvent = "Cruise drive charging for " + target.name;
   return state.lastEvent;
@@ -198,8 +204,7 @@ export function stepCruise(
   const target = getBody(system, state.targetId);
   const currentTarget = bodyPositionAt(system, target.id, epochSeconds);
   const standoff = state.arrivalDistanceMeters ?? arrivalStandOffMetres(target);
-  const away = normalize(sub(state.positionSystemMeters, currentTarget));
-  const safeAway = length(away) > 0 ? away : vec3(0, 0, 1);
+  const safeAway = state.approachDirection;
 
   // Heading toward the target is independently handled by the flight computer.
   // We do not change the ship's local thruster translation while the drive runs.
@@ -226,9 +231,7 @@ export function stepCruise(
   const approximateEta = Math.min(6000, estimateTravelSeconds(tentativeDistance, state.speedMetersPerSecond, state.throttle));
   // Lead the orbiting target using its ephemeris, recomputed every simulation tick.
   const futureTarget = bodyPositionAt(system, target.id, epochSeconds + approximateEta);
-  const futureAway = normalize(sub(state.positionSystemMeters, futureTarget));
-  const approachVector = length(futureAway) ? futureAway : safeAway;
-  const approachPosition = add(futureTarget, scale(approachVector, standoff));
+  const approachPosition = add(futureTarget, scale(safeAway, standoff));
   const toAim = sub(approachPosition, state.positionSystemMeters);
   const distance = length(toAim);
   const direction = normalize(toAim);
@@ -242,13 +245,8 @@ export function stepCruise(
   state.positionSystemMeters = add(state.positionSystemMeters, scale(direction, traveled));
   state.remainingMeters = Math.max(0, distance - traveled);
   state.etaSeconds = estimateTravelSeconds(state.remainingMeters, state.speedMetersPerSecond, state.throttle);
-  const start = state.arrivalDistanceMeters ?? standoff;
-  const initial = (state as CruiseState & { initialDistanceMeters?: number }).initialDistanceMeters;
-  if (initial === undefined) {
-    (state as CruiseState & { initialDistanceMeters?: number }).initialDistanceMeters = Math.max(start, distance);
-  }
   state.progress = clamp(1 - state.remainingMeters /
-    Math.max(1, (state as CruiseState & { initialDistanceMeters?: number }).initialDistanceMeters ?? 1), 0, 1);
+    Math.max(1, state.initialDistanceMeters), 0, 1);
 
   if (state.remainingMeters <= CRUISE_LIMITS.finalToleranceMetres &&
       state.speedMetersPerSecond <= Math.max(1_000_000, CRUISE_LIMITS.accelerationMps2 * deltaTime * 2)) {
@@ -262,7 +260,13 @@ export function requestCruiseDrop(state: CruiseState, ship: ShipState, system: S
   epochSeconds: number, frame: LocalFrame): string {
   if (state.mode === "local") return "Already using local flight";
   if (state.mode === "spooling") {
-    finishDrop(state, ship, system, epochSeconds, frame, "Cruise spool cancelled");
+    state.mode = "local";
+    state.speedMetersPerSecond = 0;
+    state.spoolRemainingSeconds = 0;
+    state.etaSeconds = null;
+    state.remainingMeters = null;
+    state.progress = 0;
+    state.lastEvent = "Cruise spool cancelled; original local reference retained";
     return state.lastEvent;
   }
   if (state.mode !== "dropping") {
@@ -298,6 +302,7 @@ function finishDrop(
   state.etaSeconds = null;
   state.spoolRemainingSeconds = 0;
   state.progress = 1;
+  state.initialDistanceMeters = 0;
   state.lastEvent = message;
   // Preserve the selected target so the crew can read the arrival location.
   return { dropped: true, frame: newFrame };
