@@ -49,6 +49,20 @@ export function validateStarSystem(system: StarSystem): void {
         body.orbit.periapsisArgumentRadians, body.orbit.meanAnomalyAtEpochRadians
       ].every(Number.isFinite)) throw new Error("Non-finite orbital angle for " + body.id);
     }
+    if (body.appearance) {
+      const visual = body.appearance;
+      if (!(visual.rotationPeriodSeconds > 0) || !Number.isFinite(visual.axialTiltRadians)
+        || !Number.isSafeInteger(visual.seed)) throw new Error("Invalid appearance for " + body.id);
+      if (visual.atmosphere &&
+        (!(visual.atmosphere.thicknessMeters > 0) ||
+        !/^#[0-9a-fA-F]{6}$/.test(visual.atmosphere.colorHex))) {
+        throw new Error("Invalid atmosphere for " + body.id);
+      }
+      if (visual.clouds && (!(visual.clouds.altitudeMeters > 0) ||
+        !(visual.clouds.coverage >= 0 && visual.clouds.coverage <= 1))) {
+        throw new Error("Invalid clouds for " + body.id);
+      }
+    }
     const visited = new Set<string>();
     let cursor: CelestialBody | undefined = body;
     while (cursor) {
