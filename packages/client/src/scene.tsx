@@ -76,7 +76,7 @@ export function MainScene({
     const engine = new Engine(canvas, true);
     const scene = new Scene(engine);
     scene.clearColor.set(0.008, 0.011, 0.024, 1);
-    const orbit = new ArcRotateCamera("orbit", -Math.PI / 4, Math.PI / 2.75, 96, Vector3.Zero(), scene);
+    const orbit = new ArcRotateCamera("orbit", -Math.PI / 4, Math.PI / 2.75, 78, Vector3.Zero(), scene);
     const tactical = new ArcRotateCamera("tactical", -Math.PI / 4, 0.47, 245, Vector3.Zero(), scene);
     const chase = new FreeCamera("chase", new Vector3(0, 20, -85), scene);
     orbit.lowerRadiusLimit = 62;
@@ -98,7 +98,7 @@ export function MainScene({
       if (propsRef.current.showHeadingSphere !== spherePreviouslyVisible) {
         spherePreviouslyVisible = propsRef.current.showHeadingSphere;
         // Open the globe at a useful scale without locking away subsequent manual zoom.
-        orbit.radius = spherePreviouslyVisible ? Math.max(orbit.radius, 135) : Math.min(orbit.radius, 100);
+        orbit.radius = spherePreviouslyVisible ? Math.max(orbit.radius, 135) : Math.min(orbit.radius, 82);
       }
     };
 
