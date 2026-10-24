@@ -249,3 +249,13 @@ kbd { display: inline-block; background: #0b1727; color: #c2d5e9; border: 1px so
   border-top: 1px solid rgba(136,192,211,.2);
   padding-top: 9px;
 }
+
+.map-focus-world {
+  background: #12444f;
+  border: 1px solid #4db4c4;
+  color: #d3fcff;
+  font-weight: 700;
+  margin: 10px 0 5px;
+  padding: 10px;
+}
+.map-focus-world:hover { background: #1c5765; }
