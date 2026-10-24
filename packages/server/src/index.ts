@@ -1,8 +1,9 @@
 import cors from "cors";
 import express from "express";
-import { createServer } from "http";
+import { createServer } from "node:http";
 import { Server } from "colyseus";
-import { BridgeRoom } from "./BridgeRoom";
+import { BridgeRoom } from "./BridgeRoom.js";
+
 const port = Number(process.env.PORT ?? 2567);
 const app = express();
 app.use(cors());

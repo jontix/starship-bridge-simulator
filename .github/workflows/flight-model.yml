@@ -1,0 +1,26 @@
+name: Flight model checks
+on:
+  push:
+    branches: [main, feature/flight-model-v1]
+  pull_request:
+    branches: [main]
+jobs:
+  build-and-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            node: '22'
+          - os: windows-latest
+            node: '24'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm install
+      - run: npm run build
+      - run: npm test
+      - run: node scripts/smoke-server.mjs
