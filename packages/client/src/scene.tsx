@@ -4,7 +4,7 @@ import {
   PointerEventTypes, Quaternion, Scene, StandardMaterial, Vector3
 } from "@babylonjs/core";
 import {
-  bodyPositionAt, choosePlanetFocus, computeFloatingOrigin, getStarSystem,
+  apparentBodyGeometry, bodyPositionAt, choosePlanetFocus, computeFloatingOrigin, getStarSystem,
   normalize, rotateVector, scale, shipPositionFromSnapshot, sub, vec3,
   type GameSnapshot, type Quat
 } from "@bridge-sim/shared";
@@ -119,7 +119,7 @@ export function MainScene({
         scene.activeCamera = wanted === "chase" ? chase :
           wanted === "planet" ? planetCamera :
           wanted === "tactical" ? tactical : wanted === "sector" ? sector : orbit;
-        if (wanted !== "chase") scene.activeCamera.attachControl(canvas, true);
+        if (wanted !== "chase" && wanted !== "planet") scene.activeCamera.attachControl(canvas, true);
       }
       if (propsRef.current.showHeadingSphere !== spherePreviouslyVisible) {
         spherePreviouslyVisible = propsRef.current.showHeadingSphere;
@@ -251,12 +251,23 @@ export function MainScene({
         planetCamera.position = Vector3.Lerp(
           planetCamera.position, renderPosition.add(cameraArm), follow
         );
-        const planetAim = toVector(scale(focusDirection, 10_000));
+        // In low orbit the world subtends >100 degrees. Aim near the limb,
+        // otherwise its horizon is invisible and the camera only sees ocean.
+        const angularRadius = apparentBodyGeometry(
+          focusedWorld.radiusMeters, bodySystemPosition, absoluteShip
+        ).apparentAngularRadiusRadians;
+        const planetUnit = toVector(focusDirection);
+        const up = Vector3.Up().subtract(planetUnit.scale(Vector3.Dot(planetUnit, Vector3.Up())));
+        if (up.lengthSquared() < 0.001) up.copyFrom(Vector3.Right());
+        up.normalize();
+        const framingOffset = Math.max(0, Math.min(1.43, angularRadius - 0.17));
+        const planetAim = planetUnit.scale(Math.cos(framingOffset))
+          .add(up.scale(Math.sin(framingOffset))).normalize().scale(10_000);
         planetCamera.setTarget(renderPosition.add(planetAim));
         const local = latest.cruise.mode === "local";
         nav.update(pose, latest.ship, latest.tick, renderOrigin, {
           sphere: local && propsRef.current.showHeadingSphere,
-          aids: local && propsRef.current.showNavigationAids,
+          aids: local && propsRef.current.showNavigationAids && propsRef.current.mode !== "planet",
           selected: propsRef.current.selectedHeading
         });
         plumes.update(latest.ship.acceleration, performance.now() / 1000);
