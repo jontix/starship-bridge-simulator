@@ -145,7 +145,7 @@ export function generatePlanetTextures(scene: Scene, body: CelestialBody): Plane
       surfaceData[p] = result.color[0];
       surfaceData[p + 1] = result.color[1];
       surfaceData[p + 2] = result.color[2];
-      surfaceData[p + 3] = result.ocean ? 255 : 0; // Shader reads alpha for ocean specularity.
+      surfaceData[p + 3] = 255; // Keep land fully opaque; avoid premultiplied canvas alpha artefacts.
 
       if (nightData) {
         const density = fractal(x * 26, y * 26, z * 26, seed + 701, 3);
@@ -153,7 +153,7 @@ export function generatePlanetTextures(scene: Scene, body: CelestialBody): Plane
         const brightness = result.land && Math.abs(latitude) < 1.14 &&
           cluster > 0.52 && density > 0.5 ? saturate((density - 0.5) * 11) * 230 : 0;
         nightData[p] = brightness;
-        nightData[p + 1] = brightness;
+        nightData[p + 1] = result.ocean ? 255 : 0; // Ocean mask packed into G.
         nightData[p + 2] = brightness;
         nightData[p + 3] = 255;
       }
