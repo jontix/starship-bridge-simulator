@@ -5,6 +5,7 @@ import {
 } from "./math.js";
 import { applyHelmCommand, createInitialShipState, SHIP_LIMITS, stepShip } from "./simulation.js";
 import { HelmCommandSchema } from "./types.js";
+import { directionToHeading, headingToDirection, quatFromAttitude, rotateVector, sub } from "./math.js";
 
 const tick = 1 / 30;
 const advance = (ship: ReturnType<typeof createInitialShipState>, seconds: number) => {
@@ -97,4 +98,32 @@ test("never integrates a giant wall-clock hitch as a giant flight step", () => {
   applyHelmCommand(ship, { type: "set_speed", speed: 200 });
   stepShip(ship, 30);
   assert.ok(length(ship.position) < 1);
+});
+
+test("heading sphere picks world direction consistently with commanded ship orientation", () => {
+  const headings = [
+    { yaw: 0, pitch: 0 },
+    { yaw: Math.PI / 2, pitch: 0 },
+    { yaw: -Math.PI / 2, pitch: 0 },
+    { yaw: Math.PI / 3, pitch: Math.PI / 4 },
+    { yaw: -2.1, pitch: -0.6 },
+    { yaw: 0, pitch: Math.PI / 2 }
+  ];
+  for (const expected of headings) {
+    const direction = headingToDirection(expected.yaw, expected.pitch);
+    const selected = directionToHeading(direction);
+    assert.ok(selected);
+    near(selected.yaw, expected.yaw, 0.000001);
+    near(selected.pitch, expected.pitch, 0.000001);
+    const forward = rotateVector(quatFromAttitude(selected.yaw, selected.pitch, 1.3), vec3(0, 0, 1));
+    near(length(sub(forward, direction)), 0, 0.000001);
+  }
+});
+
+test("heading sphere ignores invalid zero direction", () => {
+  assert.equal(directionToHeading(vec3()), null);
+  assert.equal(directionToHeading(vec3(Infinity, 0, 0)), null);
+  const direction = directionToHeading(vec3(10, 20, 10));
+  assert.ok(direction);
+  assert.ok(direction.pitch > 0);
 });
