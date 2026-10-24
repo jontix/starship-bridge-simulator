@@ -5,7 +5,7 @@ import { PlanetViewControls } from "./PlanetReadout";
 import { BeaconList, CameraSelector, driftAngle, number, Telemetry } from "./navigationUI";
 
 export function MainScreenPanel({
-  snapshot, mode, setMode, showAids, toggleAids, planetFocusId, setPlanetFocusId
+  snapshot, mode, setMode, showAids, toggleAids, planetFocusId, setPlanetFocusId, opticalZoom, setOpticalZoom
 }: {
   snapshot: GameSnapshot | null;
   mode: CameraMode;
@@ -14,13 +14,16 @@ export function MainScreenPanel({
   toggleAids: () => void;
   planetFocusId: string;
   setPlanetFocusId: (id: string) => void;
+  opticalZoom: number;
+  setOpticalZoom: (value: number) => void;
 }) {
   const ship = snapshot?.ship;
   return (
     <section className="panel main-panel">
       <h2>Main Screen</h2>
       <CameraSelector mode={mode} setMode={setMode} />
-      <PlanetViewControls snapshot={snapshot} focusId={planetFocusId} setFocusId={setPlanetFocusId}/>
+      <PlanetViewControls snapshot={snapshot} focusId={planetFocusId}
+        setFocusId={setPlanetFocusId} opticalZoom={opticalZoom} setOpticalZoom={setOpticalZoom}/>
       <CruiseReadout snapshot={snapshot}/>
       <button className={showAids ? "active" : ""} aria-pressed={showAids} onClick={toggleAids}>
         {showAids ? "Hide navigation overlays" : "Show navigation overlays"}
