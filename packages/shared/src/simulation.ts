@@ -56,12 +56,11 @@ export function applyHelmCommand(ship: ShipState, command: HelmCommand): void {
   }
 }
 
-// Fixed-step, renderer-independent flight model. Mutates and returns ship for efficient server use.
-export function stepShip(ship: ShipState, dt: number): ShipState {
-  if (!Number.isFinite(dt) || dt <= 0) return ship;
-  // A hitch must not launch the ship through space in one giant integration step.
+// Shared attitude controller: cruise may rotate the hull while its drive
+// controls barycentric translation separately from impulse thrusters.
+export function stepShipAttitude(ship: ShipState, dt: number): void {
+  if (!Number.isFinite(dt) || dt <= 0) return;
   const step = Math.min(dt, 0.1);
-
   const target = quatFromAttitude(ship.desiredYaw, ship.desiredPitch, ship.desiredRoll);
   const error = rotationError(ship.orientation, target);
 
@@ -76,6 +75,13 @@ export function stepShip(ship: ShipState, dt: number): ShipState {
     const rotation = quatFromAxisAngle(normalize(ship.angularVelocity), angleTravelled);
     ship.orientation = normalizeQuat(quatMultiply(rotation, ship.orientation));
   }
+}
+
+// Fixed-step, renderer-independent impulse flight model.
+export function stepShip(ship: ShipState, dt: number): ShipState {
+  if (!Number.isFinite(dt) || dt <= 0) return ship;
+  const step = Math.min(dt, 0.1);
+  stepShipAttitude(ship, step);
 
   // Flight assist controls a desired ship-relative velocity, not instantaneous position.
   // If the vessel is already drifting, it must use real acceleration to cancel that drift.
