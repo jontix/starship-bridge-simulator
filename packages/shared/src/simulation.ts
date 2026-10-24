@@ -1,62 +1,95 @@
-import { add, clamp, scale, shortestAngleDelta, vec3 } from "./math";
-import type { HelmCommand, ShipState } from "./types";
+import {
+  add, clamp, identityQuat, length, limitMagnitude, normalize, normalizeQuat,
+  quatFromAttitude, quatFromAxisAngle, quatMultiply, rotateVector,
+  rotationError, scale, sub, vec3
+} from "./math.js";
+import type { HelmCommand, ShipState } from "./types.js";
+
+export const SHIP_LIMITS = Object.freeze({
+  maxSpeed: 300,                   // m/s
+  maxStrafeSpeed: 60,             // m/s
+  maxAcceleration: 15,           // m/s²
+  emergencyAcceleration: 32,     // m/s²
+  maxAngularSpeed: 0.45,         // rad/s
+  angularAcceleration: 0.22,    // rad/s²
+  velocityResponse: 0.7,        // 1/s
+  attitudeResponse: 1.8         // 1/s
+});
+
 export const createInitialShipState = (): ShipState => ({
-  position: vec3(0, 0, 0),
-  velocity: vec3(0, 0, 0),
-  yaw: 0,
-  pitch: 0,
-  roll: 0,
-  angularVelocity: vec3(0, 0, 0),
+  position: vec3(),
+  velocity: vec3(),
+  acceleration: vec3(),
+  orientation: identityQuat(),
+  angularVelocity: vec3(),
   desiredYaw: 0,
   desiredPitch: 0,
   desiredRoll: 0,
-  desiredSpeed: 0
+  desiredSpeed: 0,
+  desiredStrafe: 0,
+  desiredLift: 0,
+  emergencyStopping: false
 });
-export const SHIP_LIMITS = {
-  maxSpeed: 300,
-  maxAcceleration: 18,
-  maxAngularSpeed: 0.55,
-  angularAcceleration: 0.9,
-  linearDamping: 0.08,
-  angularDamping: 0.35
-};
+
 export function applyHelmCommand(ship: ShipState, command: HelmCommand): void {
   switch (command.type) {
     case "set_heading":
       ship.desiredYaw = command.yaw;
       ship.desiredPitch = command.pitch;
       ship.desiredRoll = command.roll;
-      break;
+      return;
     case "set_speed":
       ship.desiredSpeed = clamp(command.speed, 0, SHIP_LIMITS.maxSpeed);
-      break;
+      ship.emergencyStopping = false;
+      return;
+    case "set_translation":
+      ship.desiredStrafe = clamp(command.strafe, -SHIP_LIMITS.maxStrafeSpeed, SHIP_LIMITS.maxStrafeSpeed);
+      ship.desiredLift = clamp(command.lift, -SHIP_LIMITS.maxStrafeSpeed, SHIP_LIMITS.maxStrafeSpeed);
+      ship.emergencyStopping = false;
+      return;
     case "emergency_stop":
       ship.desiredSpeed = 0;
-      break;
+      ship.desiredStrafe = 0;
+      ship.desiredLift = 0;
+      ship.emergencyStopping = true;
+      return;
   }
 }
-function stepAxis(current: number, target: number, angularVelocity: number, dt: number) {
-  const delta = shortestAngleDelta(current, target);
-  const desiredAngularVelocity = clamp(delta * 1.5, -SHIP_LIMITS.maxAngularSpeed, SHIP_LIMITS.maxAngularSpeed);
-  const accel = clamp(desiredAngularVelocity - angularVelocity, -SHIP_LIMITS.angularAcceleration * dt, SHIP_LIMITS.angularAcceleration * dt);
-  const nextAngularVelocity = (angularVelocity + accel) * (1 - SHIP_LIMITS.angularDamping * dt);
-  return { value: current + nextAngularVelocity * dt, angularVelocity: nextAngularVelocity };
-}
+
+// Fixed-step, renderer-independent flight model. Mutates and returns ship for efficient server use.
 export function stepShip(ship: ShipState, dt: number): ShipState {
-  const yaw = stepAxis(ship.yaw, ship.desiredYaw, ship.angularVelocity.y, dt);
-  const pitch = stepAxis(ship.pitch, ship.desiredPitch, ship.angularVelocity.x, dt);
-  const roll = stepAxis(ship.roll, ship.desiredRoll, ship.angularVelocity.z, dt);
-  ship.yaw = yaw.value;
-  ship.pitch = pitch.value;
-  ship.roll = roll.value;
-  ship.angularVelocity = vec3(pitch.angularVelocity, yaw.angularVelocity, roll.angularVelocity);
-  // Babylon default forward is +Z for our prototype convention.
-  const forward = vec3(Math.sin(ship.yaw) * Math.cos(ship.pitch), Math.sin(ship.pitch), Math.cos(ship.yaw) * Math.cos(ship.pitch));
-  const currentForwardSpeed = ship.velocity.x * forward.x + ship.velocity.y * forward.y + ship.velocity.z * forward.z;
-  const speedError = ship.desiredSpeed - currentForwardSpeed;
-  const acceleration = clamp(speedError * 0.8, -SHIP_LIMITS.maxAcceleration, SHIP_LIMITS.maxAcceleration);
-  ship.velocity = add(ship.velocity, scale(forward, acceleration * dt));
-  ship.velocity = scale(ship.velocity, 1 - SHIP_LIMITS.linearDamping * dt);
-  ship.position = add(ship.position, scale(ship.velocity, dt));
+  if (!Number.isFinite(dt) || dt <= 0) return ship;
+  // A hitch must not launch the ship through space in one giant integration step.
+  const step = Math.min(dt, 0.1);
+
+  const target = quatFromAttitude(ship.desiredYaw, ship.desiredPitch, ship.desiredRoll);
+  const error = rotationError(ship.orientation, target);
+
+  // Braking-limited rotation: turn hard when far away, then decelerate to avoid overshoot.
+  const brakingRate = Math.sqrt(2 * SHIP_LIMITS.angularAcceleration * error.radians);
+  const targetRate = Math.min(SHIP_LIMITS.maxAngularSpeed, brakingRate, error.radians * SHIP_LIMITS.attitudeResponse);
+  const desiredOmega = scale(error.axis, targetRate);
+  const omegaChange = limitMagnitude(sub(desiredOmega, ship.angularVelocity), SHIP_LIMITS.angularAcceleration * step);
+  ship.angularVelocity = add(ship.angularVelocity, omegaChange);
+  const angleTravelled = length(ship.angularVelocity) * step;
+  if (angleTravelled > 1e-10) {
+    const rotation = quatFromAxisAngle(normalize(ship.angularVelocity), angleTravelled);
+    ship.orientation = normalizeQuat(quatMultiply(rotation, ship.orientation));
+  }
+
+  // Flight assist controls a desired ship-relative velocity, not instantaneous position.
+  // If the vessel is already drifting, it must use real acceleration to cancel that drift.
+  const requestedLocal = ship.emergencyStopping
+    ? vec3()
+    : vec3(ship.desiredStrafe, ship.desiredLift, ship.desiredSpeed);
+  const desiredWorldVelocity = rotateVector(ship.orientation, limitMagnitude(requestedLocal, SHIP_LIMITS.maxSpeed));
+  const velocityError = sub(desiredWorldVelocity, ship.velocity);
+  const accelerationLimit = ship.emergencyStopping ? SHIP_LIMITS.emergencyAcceleration : SHIP_LIMITS.maxAcceleration;
+  ship.acceleration = limitMagnitude(scale(velocityError, SHIP_LIMITS.velocityResponse), accelerationLimit);
+
+  // Semi-implicit Euler. Fixed 30 Hz server timestep; no artificial velocity reset.
+  ship.velocity = add(ship.velocity, scale(ship.acceleration, step));
+  ship.velocity = limitMagnitude(ship.velocity, SHIP_LIMITS.maxSpeed);
+  ship.position = add(ship.position, scale(ship.velocity, step));
   return ship;
 }
