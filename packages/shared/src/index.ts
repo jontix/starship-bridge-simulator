@@ -6,3 +6,4 @@ export * from "./universe/types.js";
 export * from "./universe/units.js";
 export * from "./universe/registry.js";
 export * from "./universe/orbits.js";
+export * from "./universe/floating-origin.js";
