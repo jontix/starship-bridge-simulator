@@ -1,7 +1,7 @@
 import { Room, Client } from "colyseus";
 import {
   applyHelmCommand, createInitialShipState, HelmCommandSchema,
-  RoleSchema, stepShip, type GameSnapshot, type PlayerRole, type ShipState
+  RoleSchema, stepShip, DEFAULT_SYSTEM_ID, getStarSystem, validateStarSystem, type GameSnapshot, type PlayerRole, type ShipState
 } from "@bridge-sim/shared";
 
 type JoinOptions = { role?: PlayerRole };
@@ -12,10 +12,17 @@ export class BridgeRoom extends Room {
   private ship: ShipState = createInitialShipState();
   private roles = new Map<string, PlayerRole>();
   private tick = 0;
+  private readonly starSystem = getStarSystem(process.env.BRIDGE_SYSTEM_ID ?? DEFAULT_SYSTEM_ID);
+  private readonly startUnixSeconds = Date.now() / 1000;
 
   private snapshot(): GameSnapshot {
     return {
       tick: this.tick,
+      universe: {
+        systemId: this.starSystem.id,
+        epochSeconds: this.startUnixSeconds + this.tick * TICK_SECONDS,
+        referenceBodyId: this.starSystem.start.referenceBodyId
+      },
       serverTime: Date.now(),
       ship: {
         ...this.ship,
@@ -29,6 +36,8 @@ export class BridgeRoom extends Room {
   }
 
   onCreate(): void {
+    validateStarSystem(this.starSystem);
+    console.log("Bridge room in star system " + this.starSystem.name + " (" + this.starSystem.id + ")");
     this.setSimulationInterval(() => {
       stepShip(this.ship, TICK_SECONDS);
       this.tick += 1;
