@@ -190,8 +190,13 @@ export function stepCruise(
     const targetPosition = state.targetId
       ? bodyPositionAt(system, state.targetId, epochSeconds)
       : state.positionSystemMeters;
-    const toward = normalize(sub(targetPosition, state.positionSystemMeters));
-    const movement = scale(toward, state.speedMetersPerSecond * deltaTime);
+    const target = state.targetId ? getBody(system, state.targetId) : null;
+    const safePoint = target
+      ? add(targetPosition, scale(state.approachDirection, arrivalStandOffMetres(target)))
+      : targetPosition;
+    const remaining = sub(safePoint, state.positionSystemMeters);
+    const movement = scale(normalize(remaining),
+      Math.min(length(remaining), state.speedMetersPerSecond * deltaTime));
     state.positionSystemMeters = add(state.positionSystemMeters, movement);
     state.etaSeconds = state.speedMetersPerSecond / CRUISE_LIMITS.accelerationMps2;
     if (state.speedMetersPerSecond <= CRUISE_LIMITS.safeDropSpeedMps) {
@@ -218,6 +223,8 @@ export function stepCruise(
   stepShipAttitude(ship, deltaTime);
 
   if (state.mode === "spooling") {
+    // Spooling remains co-moving with the original local orbital reference frame.
+    state.positionSystemMeters = systemPositionOfShip(system, frame, ship.position, epochSeconds);
     state.spoolRemainingSeconds = Math.max(0, state.spoolRemainingSeconds - deltaTime);
     if (state.spoolRemainingSeconds <= 0) {
       state.mode = "cruise";
