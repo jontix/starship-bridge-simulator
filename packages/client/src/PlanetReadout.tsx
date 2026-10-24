@@ -1,14 +1,17 @@
 import { formatAstronomicalDistance, type GameSnapshot } from "@bridge-sim/shared";
 import { assessPlanetView } from "./planetView";
+import type { SurfaceDetailMode } from "./surfaceDetail";
 
 export function PlanetViewControls({
-  snapshot, focusId, setFocusId, opticalZoom, setOpticalZoom
+  snapshot, focusId, setFocusId, opticalZoom, setOpticalZoom, surfaceDetailMode, setSurfaceDetailMode
 }: {
   snapshot: GameSnapshot | null;
   focusId: string;
   setFocusId: (id: string) => void;
   opticalZoom: number;
   setOpticalZoom: (zoom: number) => void;
+  surfaceDetailMode: SurfaceDetailMode;
+  setSurfaceDetailMode: (mode: SurfaceDetailMode) => void;
 }) {
   if (!snapshot) return null;
   const {
@@ -34,6 +37,15 @@ export function PlanetViewControls({
         {[1, 2, 4, 8, 16, 32].map(zoom => (
           <option value={zoom} key={zoom}>{zoom}× {zoom >= 4 ? "· telescope" : "· exterior view"}</option>
         ))}
+      </select>
+    </label>
+    <label className="planet-view-label">
+      <span>Fractal orbital surface detail</span>
+      <select aria-label="Surface detail quality" value={surfaceDetailMode}
+        onChange={event => setSurfaceDetailMode(event.target.value as SurfaceDetailMode)}>
+        <option value="off">Off — baked planet maps only</option>
+        <option value="balanced">Balanced — medium fractal detail</option>
+        <option value="high">High — mountain, ocean and cloud detail</option>
       </select>
     </label>
     {isSurfaceCloseup && <div className="planet-zoom-explanation" role="status">
@@ -68,6 +80,8 @@ export function PlanetViewControls({
       change course or continue observing as orbital positions evolve.
     </p>}
     <p className="subtle planet-view-hint">
+      Fractal shading adds smaller features as the planet fills the screen and
+      filters detail below one pixel. It never changes the planet's physical size.
       Globes have actual angular scale in 3D. System Map icons remain schematic.
       Changing the target or magnification automatically opens the
       <strong> Planet / orbital</strong> camera. At 4× or greater this becomes

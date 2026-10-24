@@ -1,3 +1,5 @@
+import { initializeOrbitalDetailLab } from "./orbitalDetailLab";
+
 const labels: Record<string,{name:string,min:number,max:number,step:number,flag:string}> = {
   oceanCoverage:{name:"Ocean coverage",min:.15,max:.9,step:.01,flag:"--ocean"},
   continentalScale:{name:"Continental scale",min:.6,max:4,step:.1,flag:"--continental"},
@@ -15,6 +17,7 @@ let preset="haven";
 let baseline:Options={};
 let params:Options={};
 let lastCommand="";
+const orbitalComparison = initializeOrbitalDetailLab();
 const format=(v:number)=>Number.isInteger(v)?String(v):v.toFixed(2);
 function updateCommand(){
   params.seed=Number(input("seed").value);
@@ -78,6 +81,7 @@ async function load(){
     updateCommand();
     $("status").textContent="Loaded "+preset+" • "+manifest.generator+". Fixed lighting and identical map seed across three views.";
     $("status").classList.remove("error");
+    orbitalComparison.configure(preset, Number(params.seed));
   }catch{
     params=preset==="haven"
       ?{seed:48271,width:1024,oceanCoverage:.68,continentalScale:1.6,mountainStrength:.68,moisture:.60,cloudCoverage:.42,polarCooling:.84}
@@ -89,6 +93,8 @@ async function load(){
     updateCommand();
     $("status").textContent="No maps built yet for "+preset+". Run the command below and refresh.";
     $("status").classList.add("error");
+    orbitalComparison.dispose();
+    $("orbital-render-status").textContent = "Generate this preset first to load its Babylon detail comparison.";
   }
 }
 input("preset").addEventListener("change",()=>void load());

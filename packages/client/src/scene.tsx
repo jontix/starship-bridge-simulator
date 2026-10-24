@@ -15,6 +15,7 @@ import {
 import { createReferenceStation } from "./celestialScene";
 import { createPlanetaryBackground } from "./planetaryScene";
 import { createSpaceLighting, upgradeShipAppearance } from "./shipLighting";
+import type { SurfaceDetailMode } from "./surfaceDetail";
 
 export type CameraMode = "orbit" | "chase" | "tactical" | "sector" | "planet";
 type Sample = { snapshot: GameSnapshot; receivedAt: number };
@@ -62,20 +63,21 @@ type MainSceneProps = {
   onHeadingPicked: (heading: PickedHeading) => void;
   planetFocusId: string;
   opticalZoom: number;
+  surfaceDetailMode: SurfaceDetailMode;
 };
 
 export function MainScene({
   snapshot, mode, showHeadingSphere, showNavigationAids,
-  selectedHeading, onHeadingPicked, planetFocusId, opticalZoom
+  selectedHeading, onHeadingPicked, planetFocusId, opticalZoom, surfaceDetailMode
 }: MainSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const samplesRef = useRef<Sample[]>([]);
   const latestRef = useRef(snapshot);
   latestRef.current = snapshot;
   const propsRef = useRef({
-    mode, showHeadingSphere, showNavigationAids, selectedHeading, onHeadingPicked, planetFocusId, opticalZoom
+    mode, showHeadingSphere, showNavigationAids, selectedHeading, onHeadingPicked, planetFocusId, opticalZoom, surfaceDetailMode
   });
-  propsRef.current = { mode, showHeadingSphere, showNavigationAids, selectedHeading, onHeadingPicked, planetFocusId, opticalZoom };
+  propsRef.current = { mode, showHeadingSphere, showNavigationAids, selectedHeading, onHeadingPicked, planetFocusId, opticalZoom, surfaceDetailMode };
 
   useEffect(() => {
     if (!snapshot) { samplesRef.current = []; return; }
@@ -328,7 +330,8 @@ export function MainScene({
           visualSnapshot, activeCamera, { x: cameraOffset.x, y: cameraOffset.y, z: cameraOffset.z },
           propsRef.current.planetFocusId, engine.getRenderHeight(),
           propsRef.current.showNavigationAids,
-          propsRef.current.mode !== "tactical"
+          propsRef.current.mode !== "tactical",
+          propsRef.current.surfaceDetailMode
         );
         const cruiseSpeed = latest.cruise.speedMetersPerSecond;
         streaks.setEnabled(!local && cruiseSpeed > 5_000);

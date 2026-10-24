@@ -216,6 +216,28 @@ Generated binaries are intentionally git-ignored, but the generator,
 presets and tests are versioned. For details see
 [Procedural Planet Generator guide](docs/procedural-planet-generator.md).
 
+## Planetary Surface Detail LOD v1 — fractal orbital textures
+
+On `feature/planetary-surface-detail-lod-v1`, Babylon's terrestrial surface
+shader blends **seeded high-frequency detail** over the generated planet maps,
+with distance-aware filtering to avoid pixel shimmer and keep distant globes
+smooth. The physical globe radius, navigation distances, flight and cruise
+simulation remain unchanged.
+
+- Rocks, highlands, plains, oceans and clouds get different fine-scale
+  shading. Generated height/roughness maps now inform terrain emphasis.
+- Main Screen and Helm offer **Fractal orbital surface detail: Off / Balanced /
+  High** so you can compare before/after in the actual orbit camera.
+- Planet Lab at `http://127.0.0.1:5173/planet-lab.html` has **two matching
+  live Babylon preview canvases**—baked maps vs fractals—at fixed 20,000 km,
+  2,500 km, 430 km and 100 km altitudes, with editable detail scale and
+  strength. This is a GPU comparison, not an approximation to the screenshot.
+- Far-distance/low-resolution views progressively suppress invisible fractal
+  bands to prevent moiré/aliasing.
+
+See [Orbital Surface Detail LOD design and checklist](docs/planetary-surface-detail-lod.md).
+True displaced topography and surface landing remain future work.
+
 ## Monorepo
 
 - `packages/shared` — flight math, simulation, commands and tests

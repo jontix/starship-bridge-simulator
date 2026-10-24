@@ -18,6 +18,19 @@ const generated = import.meta.glob(
   "./assets/generated-planets/*/*.{png,jpg,jpeg,webp}",
   { eager:true, query:"?url", import:"default" }
 ) as Record<string,string>;
+const generatedManifests = import.meta.glob(
+  "./assets/generated-planets/*/manifest.json",
+  { eager: true, import: "default" }
+) as Record<string, { options?: { seed?: number } }>;
+
+/** Use the same seed for baked continents and shader-space microterrain.
+ * New planets without generated assets fall back to their catalog seed.
+ */
+export function getGeneratedPlanetSeed(body: CelestialBody): number {
+  const key = "./assets/generated-planets/" + body.id + "/manifest.json";
+  const seed = generatedManifests[key]?.options?.seed;
+  return Number.isFinite(seed) ? seed! : (body.appearance?.seed ?? 1);
+}
 
 function locateIn(collection: Record<string,string>, bodyId: string, channel: string,
   folder: string): string | null {
@@ -46,6 +59,8 @@ export function attachAuthoredPlanetTextures(
   const channels=[
     {name:"albedo",sampler:"surfaceSampler",target:surfaceMaterial},
     {name:"night",sampler:"nightSampler",target:surfaceMaterial},
+    {name:"height",sampler:"heightSampler",target:surfaceMaterial},
+    {name:"roughness",sampler:"roughnessSampler",target:surfaceMaterial},
     {name:"clouds",sampler:"cloudSampler",target:cloudMaterial}
   ] as const;
   for(const channel of channels){

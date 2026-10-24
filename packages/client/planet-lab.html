@@ -42,6 +42,16 @@ button:hover{background:#247699}
 .actions button{font-size:12px}
 @media(max-width:1000px){.layout{grid-template-columns:1fr}.previews{gap:5px}.maps{grid-template-columns:1fr}}
 @media(max-width:500px){.previews{grid-template-columns:1fr}.readouts{grid-template-columns:1fr}header{flex-wrap:wrap}}
+
+.detail-comparison {margin:26px 0 8px;padding-top:20px;border-top:1px solid #335065}
+.detail-settings {display:flex;align-items:center;flex-wrap:wrap;gap:18px;margin:16px 0}
+.detail-settings label {margin:0;min-width:160px;flex:1;font-size:12px}
+.detail-settings input[type=checkbox]{accent-color:#82def5}
+.detail-canvases {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.detail-canvases figure{margin:0;background:#040b17;border:1px solid #39576e;border-radius:10px;overflow:hidden}
+.detail-canvases canvas{display:block;width:100%;height:auto;aspect-ratio:9/6}
+.detail-canvases figcaption{background:#14283a;padding:10px;color:#c6eafa;font-size:12px}
+@media(max-width:720px){.detail-canvases{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -78,6 +88,32 @@ button:hover{background:#247699}
 <div><div class="label">Cloud alpha</div><img id="clouds" alt="Generated cloud map"></div>
 </div>
 <p style="font-size:12px">Additional exported maps: tangent-space normals, roughness and packed night-light/ocean mask. The game uses the generated surface/cloud/night maps. These three lighting previews are deterministic software look-development images, <strong>not exact Babylon shader captures</strong>.</p>
+<div class="detail-comparison">
+<h2>Orbital surface detail LOD — real Babylon comparison</h2>
+<p>These two live GPU previews use the same generated PNG maps, sunlight, camera and planet size. The left view is always the original maps; the right adds seeded, distance-filtered fractal detail. Change altitude without changing the ship or the star-system clock.</p>
+<div class="detail-settings">
+<label>Observation altitude
+<select id="detail-altitude">
+<option value="20000">20,000 km — distant approach</option>
+<option value="2500">2,500 km — high orbit</option>
+<option value="430" selected>430 km — Haven Highport</option>
+<option value="100">100 km — low orbit (future)</option>
+</select></label>
+<label>Fractal detail strength <span id="detail-strength-value">1.00</span>
+<input id="detail-strength" type="range" min="0" max="1.5" value="1" step="0.05"/></label>
+<label>Feature frequency scale <span id="detail-scale-value">1.00×</span>
+<input id="detail-scale" type="range" min="0.5" max="2.5" value="1" step="0.1"/></label>
+<label><span>Weather layer</span><span><input id="detail-clouds" type="checkbox"/> Include clouds</span></label>
+</div>
+<div id="orbital-render-status" class="notice">Starting orbital GPU views…</div>
+<div class="detail-canvases">
+<figure><canvas id="detail-before" width="480" height="320" aria-label="Original baked planet texture at selected altitude"></canvas>
+<figcaption>Baked maps only — detail OFF</figcaption></figure>
+<figure><canvas id="detail-after" width="480" height="320" aria-label="Fractal orbital surface detail at selected altitude"></canvas>
+<figcaption>Distance-adaptive 3D fractals — detail ON</figcaption></figure>
+</div>
+<p style="font-size:12px">GPU previews use the actual Babylon surface and cloud shaders. Lighting and viewing longitude are fixed, with the camera above a reference globe of Haven's true radius. Fractals affect shading and normals, <strong>not terrain height, ship collisions or orbital scale.</strong></p>
+</div>
 </section>
 </div></main>
 <script type="module" src="/src/planetLab.ts"></script>

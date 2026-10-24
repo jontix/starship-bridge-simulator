@@ -2,10 +2,11 @@ import { length, type GameSnapshot } from "@bridge-sim/shared";
 import type { CameraMode } from "./scene";
 import { CruiseReadout } from "./CruisePanel";
 import { PlanetViewControls } from "./PlanetReadout";
+import type { SurfaceDetailMode } from "./surfaceDetail";
 import { BeaconList, CameraSelector, driftAngle, number, Telemetry } from "./navigationUI";
 
 export function MainScreenPanel({
-  snapshot, mode, setMode, showAids, toggleAids, planetFocusId, setPlanetFocusId, opticalZoom, setOpticalZoom
+  snapshot, mode, setMode, showAids, toggleAids, planetFocusId, setPlanetFocusId, opticalZoom, setOpticalZoom, surfaceDetailMode, setSurfaceDetailMode
 }: {
   snapshot: GameSnapshot | null;
   mode: CameraMode;
@@ -16,6 +17,8 @@ export function MainScreenPanel({
   setPlanetFocusId: (id: string) => void;
   opticalZoom: number;
   setOpticalZoom: (value: number) => void;
+  surfaceDetailMode: SurfaceDetailMode;
+  setSurfaceDetailMode: (mode: SurfaceDetailMode) => void;
 }) {
   const ship = snapshot?.ship;
   return (
@@ -25,7 +28,8 @@ export function MainScreenPanel({
       <PlanetViewControls snapshot={snapshot} focusId={planetFocusId}
         setFocusId={id => { setPlanetFocusId(id); setMode("planet"); }}
         opticalZoom={opticalZoom}
-        setOpticalZoom={zoom => { setOpticalZoom(zoom); setMode("planet"); }}/>
+        setOpticalZoom={zoom => { setOpticalZoom(zoom); setMode("planet"); }}
+        surfaceDetailMode={surfaceDetailMode} setSurfaceDetailMode={setSurfaceDetailMode}/>
       <CruiseReadout snapshot={snapshot}/>
       <button className={showAids ? "active" : ""} aria-pressed={showAids} onClick={toggleAids}>
         {showAids ? "Hide navigation overlays" : "Show navigation overlays"}
