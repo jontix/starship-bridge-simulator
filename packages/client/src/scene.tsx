@@ -302,7 +302,10 @@ export function MainScene({
         planetCamera.position = Vector3.Lerp(
           planetCamera.position, renderPosition.add(cameraArm), follow
         );
-        planetCamera.setTarget(renderPosition.add(planetAimDirection.scale(10_000)));
+        // Aim at a mathematically distant point. At 32× a target only 10km
+        // away introduces enough parallax from the camera's 35m sidestep to
+        // push a half-degree star out of its 1.43° telescope field of view.
+        planetCamera.setTarget(renderPosition.add(planetAimDirection.scale(10_000_000)));
         // Physical planet radius, range and angular diameter never change.
         // Magnification narrows the *optical field of view*; when telescopic,
         // hide local ship/station silhouettes to simulate a dedicated sensor.
