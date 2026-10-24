@@ -183,7 +183,7 @@ void main(void) {
   }
 
   float opacity = (1.0 - exp(-optical * 0.21 * atmosphereDensity));
-  float sunlight = gatheredLight / max(optical, 0.0001);
+  vec3 sunlight = gatheredLight / max(optical, 0.0001);
   float rayToSun = dot(dir, toSun);
   float forwardScatter = pow(max(0.0, rayToSun), 11.0) * 0.35;
   float viewOpacity = min(0.62, opacity * (0.65 + forwardScatter));
