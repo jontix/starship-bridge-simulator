@@ -111,6 +111,9 @@ aims close to the **limb** when the angular radius is large, framing both
 curvature and surrounding space. This changes only camera framing, not
 the planet's scale or position.
 
+System Map now also offers **View [body] in 3D orbital camera**, opening
+the selected body without plotting cruise or moving the ship.
+
 Both Main Screen and Helm display the focused body's physical radius,
 camera-independent distance from ship centre, surface altitude and
 apparent angular diameter. Change the focus dropdown to inspect another
