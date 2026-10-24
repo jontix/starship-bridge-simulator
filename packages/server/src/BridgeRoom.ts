@@ -11,13 +11,26 @@ import {
 type JoinOptions = { role?: PlayerRole };
 const TICK_SECONDS = 1 / 30;
 
+/** Optional test-only fixed epoch for deterministic visual regression scenes.
+ * In ordinary gameplay the room continues to start at the current UTC time.
+ */
+function initialUniverseEpochSeconds(): number {
+  const testEpoch = process.env.BRIDGE_TEST_START_EPOCH_SECONDS;
+  if (testEpoch === undefined) return Date.now() / 1000;
+  const seconds = Number(testEpoch);
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    throw new Error("BRIDGE_TEST_START_EPOCH_SECONDS must be a positive finite Unix timestamp");
+  }
+  return seconds;
+}
+
 export class BridgeRoom extends Room {
   maxClients = 8;
   private ship: ShipState = createInitialShipState();
   private roles = new Map<string, PlayerRole>();
   private tick = 0;
   private readonly starSystem = getStarSystem(process.env.BRIDGE_SYSTEM_ID ?? DEFAULT_SYSTEM_ID);
-  private readonly startUnixSeconds = Date.now() / 1000;
+  private readonly startUnixSeconds = initialUniverseEpochSeconds();
   private frame: LocalFrame = {
     referenceBodyId: this.starSystem.start.referenceBodyId,
     offsetFromReferenceMeters: { ...this.starSystem.start.offsetFromReferenceMeters }
