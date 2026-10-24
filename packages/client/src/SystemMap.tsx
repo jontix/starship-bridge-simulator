@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
 import {
   METRES_PER_AU, SECONDS_PER_DAY, formatAstronomicalDistance,
-  getBody, getStarSystem, listStarSystems, localShipToSystemPosition,
+  getBody, getStarSystem, listStarSystems, shipPositionFromSnapshot,
   relativeOrbitalPosition, systemPositionsAt,
   type CelestialBody, type GameSnapshot, type StarSystem, type Vec3
 } from "@bridge-sim/shared";
 
-type MapProps = { snapshot: GameSnapshot | null; onClose: () => void };
+type MapProps = { snapshot: GameSnapshot | null; onClose: () => void; onPlotCourse?: (targetId: string) => void };
 
 const CENTRE = { x: 334, y: 310 };
 const ORBIT_RADIUS = 260;
@@ -30,7 +30,7 @@ function chooseMapParent(system: StarSystem, body: CelestialBody): CelestialBody
   return current;
 }
 
-export function SystemMap({ snapshot, onClose }: MapProps) {
+export function SystemMap({ snapshot, onClose, onPlotCourse }: MapProps) {
   const [selectionId, setSelectionId] = useState("haven");
   const [previewDays, setPreviewDays] = useState(0);
   const systemId = snapshot?.universe.systemId ?? listStarSystems()[0].id;
@@ -64,7 +64,7 @@ export function SystemMap({ snapshot, onClose }: MapProps) {
     }), [system, maxAu]);
 
   const shipPosition = snapshot
-    ? localShipToSystemPosition(system, snapshot.ship.position, universeNow)
+    ? shipPositionFromSnapshot(system, snapshot)
     : null;
   const distance = shipPosition && selectedPositionLive
     ? Math.hypot(
@@ -77,6 +77,10 @@ export function SystemMap({ snapshot, onClose }: MapProps) {
   const periodDays = selected.orbit ? selected.orbit.periodSeconds / SECONDS_PER_DAY : null;
   const elapsedPreview = previewDays !== 0;
   const stationCount = bodies.filter(body => body.kind === "station").length;
+  const routeTargetPosition = snapshot?.cruise.targetId ? livePositions[snapshot.cruise.targetId] : null;
+  const routeTargetName = snapshot?.cruise.targetId
+    ? bodies.find(body => body.id === snapshot.cruise.targetId)?.name
+    : null;
 
   return (
     <div className="system-map-shade" role="dialog" aria-modal="true" aria-label="Star system navigation map">
@@ -135,6 +139,15 @@ export function SystemMap({ snapshot, onClose }: MapProps) {
                   {satellites > 0 && <text x={point.x + 15} y={point.y + 5} fill="#7edec3" fontSize="9">{satellites} nearby orbits</text>}
                 </g>;
               })}
+              {shipPosition && routeTargetPosition && !elapsedPreview && (() => {
+                const a = mapProjection(shipPosition, maxAu);
+                const b = mapProjection(routeTargetPosition, maxAu);
+                return <g>
+                  <line x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                    stroke="#68f5e2" strokeWidth="1.8" strokeDasharray="7 5" opacity="0.9"/>
+                  <circle cx={b.x} cy={b.y} r="22" fill="none" stroke="#75ffdc" strokeWidth="1.3"/>
+                </g>;
+              })()}
               {shipPosition && !elapsedPreview && (() => {
                 const point = mapProjection(shipPosition, maxAu);
                 return <g>
@@ -168,6 +181,7 @@ export function SystemMap({ snapshot, onClose }: MapProps) {
           <aside className="system-map-inspector">
             <div className="map-inspector-status">
               <strong>{bodies.length} orbiting bodies & objects</strong>
+              <span>Flight mode: {snapshot?.cruise.mode.toUpperCase() ?? "—"} · Course: {routeTargetName ?? "Unplotted"}</span>
               <span>{stationCount} stations · {listStarSystems().length} registered system(s)</span>
             </div>
             <h3>Celestial catalog</h3>
@@ -193,7 +207,12 @@ export function SystemMap({ snapshot, onClose }: MapProps) {
                 {distance !== null && <><dt>From ship (live)</dt><dd>{formatAstronomicalDistance(distance)}</dd></>}
                 <dt>Orbit inclination</dt><dd>{selected.orbit ? (selected.orbit.inclinationRadians * 180 / Math.PI).toFixed(1) + "°" : "—"}</dd>
               </dl>
-              <p className="map-note">No cruise or jump orders yet. This map is a navigational and orbital test instrument.</p>
+              {onPlotCourse && <button className="engage" disabled={!snapshot || snapshot.cruise.mode !== "local"}
+                onClick={() => onPlotCourse(selected.id)}>
+                Plot cruise course to {selected.name}
+              </button>}
+              <p className="map-note">The plotted route follows a moving destination's Keplerian orbit.
+                Helm must engage the drive separately. Time preview is never authoritative.</p>
             </div>
           </aside>
         </div>
