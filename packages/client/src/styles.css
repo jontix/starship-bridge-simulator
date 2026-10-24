@@ -38,3 +38,33 @@ button.danger { margin-top: 14px; background: #5a2630; border-color: #a34f5b; }
   .main-panel { left: 10px; }
   .scene-caption { display: none; }
 }
+
+/* Navigation visualization / Helm flight testing */
+.toolbar-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.toolbar-buttons button { margin-top: 0; padding: 9px 6px; font-size: 12px; }
+button.active { background: #204563; border-color: #55aed4; }
+button.engage { background: #18606b; border-color: #54c4c8; color: #efffff; font-weight: 700; }
+button.engage:hover:not(:disabled) { background: #217987; }
+kbd { display: inline-block; background: #0b1727; color: #c2d5e9; border: 1px solid #3e5e75; border-radius: 4px; padding: 1px 5px; font-family: inherit; font-size: 10px; margin-left: 5px; }
+.selected-bearing { display: flex; flex-direction: column; gap: 3px; padding: 12px 13px; border-radius: 9px; border: 1px solid #2d6878; background: #0c2a37; font-variant-numeric: tabular-nums; }
+.selected-bearing span { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #7abdcf; }
+.selected-bearing strong { color: #ccfaff; font-size: 15px; }
+.selected-bearing small { color: #a0bbca; font-size: 11px; }
+.instruction { margin: 5px 0 13px; }
+.beacon-list { display: flex; flex-direction: column; gap: 5px; margin: 10px 0; }
+.beacon-row { display: flex; justify-content: space-between; gap: 12px; background: rgba(51, 94, 130, .16); padding: 7px 9px; border-radius: 6px; font-variant-numeric: tabular-nums; }
+.beacon-row span { color: #abc2d9; font-size: 11px; }
+.beacon-row strong { color: #dcefff; white-space: nowrap; font-size: 12px; }
+.nav-legend { position: absolute; left: 17px; bottom: 36px; width: 244px; padding: 12px 15px; border: 1px solid rgba(88,185,214,.4); border-radius: 10px; background: rgba(9,20,34,.84); backdrop-filter: blur(7px); display: flex; flex-direction: column; gap: 6px; font-size: 11px; pointer-events: none; color: #ccddea; }
+.nav-legend > strong { letter-spacing: .09em; color: #9ee1f3; font-size: 11px; padding-bottom: 4px; }
+.nav-legend span { display: flex; align-items: center; gap: 8px; }
+.nav-legend small { margin-top: 4px; line-height: 1.45; color: #b7c8db; }
+.swatch { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.swatch.preview { background: #38eaff; }
+.swatch.ordered { background: #ff982e; }
+.swatch.bow { background: #fff; }
+.swatch.velocity { background: #70ff8e; }
+@media (max-width: 680px) {
+  .nav-legend { max-width: 205px; padding: 9px 10px; bottom: 8px; left: 8px; }
+  .nav-legend small { display: none; }
+}
