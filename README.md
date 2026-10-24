@@ -68,6 +68,23 @@ The server smoke test starts the compiled bundle and the TypeScript development
 loader, verifying `/health` on two temporary ports. This catches startup errors
 that TypeScript compilation alone would miss.
 
+## Navigation visuals (experimental branch)
+
+Use `feature/navigation-visuals` to test the ship's handling with better spatial references.
+The flight physics constants are **unchanged**.
+
+- At Helm, press **H** to show/hide a world-aligned **heading sphere** around the ship.
+- Click the sphere to **select** a bearing and elevation. Press **Set attitude** to send
+  the order to the server. Roll remains an independent control.
+- Cyan sphere marker: selected heading; amber: commanded heading; white: actual bow.
+- Green arrow: world velocity; violet path: past positions. Watch the off-axis drift angle
+  while turning at speed.
+- Reference grid, procedural starfield, training beacons (NAV A–D) with distance readouts,
+  and acceleration-responsive engine exhaust.
+- Orbit, chase and tactical cameras with improved follow/framing, plus nav aid visibility toggle.
+
+Full walkthrough: [Navigation Visuals manual test plan](docs/navigation-visuals.md).
+
 ## Monorepo
 
 - `packages/shared` — flight math, simulation, commands and tests
