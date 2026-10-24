@@ -3,7 +3,7 @@ import {
   StandardMaterial, TransformNode, Vector3
 } from "@babylonjs/core";
 import {
-  directionToHeading, headingToDirection, NAV_MARKERS,
+  directionToHeading, headingToDirection, NAV_MARKERS, rotateVector, vec3,
   type ShipState
 } from "@bridge-sim/shared";
 
@@ -225,7 +225,10 @@ export function createNavigationVisuals(scene: Scene) {
       sphere.selected.position.copyFrom(toVector(selectedDirection).scale(SPHERE_RADIUS));
       const commandedDirection = headingToDirection(ship.desiredYaw, ship.desiredPitch);
       sphere.ordered.position.copyFrom(toVector(commandedDirection).scale(SPHERE_RADIUS - 0.2));
-      const forward = Vector3.TransformCoordinates(Vector3.Forward(), pose.orientation.toRotationMatrix());
+      const forward = toVector(rotateVector(
+        { x: pose.orientation.x, y: pose.orientation.y, z: pose.orientation.z, w: pose.orientation.w },
+        vec3(0, 0, 1)
+      ));
       sphere.bow.position.copyFrom(forward.normalize().scale(SPHERE_RADIUS - 0.5));
     }
 
