@@ -109,7 +109,8 @@ try {
   console.log("Captured Haven high-orbit view:", haven);
 
   await page.getByLabel("Focused planet").selectOption("aster");
-  await sleep(1500);
+  await page.getByLabel("Optical magnification").selectOption("32");
+  await sleep(1800);
   assert.equal(shaderFailures.length, 0, "Aster shader compilation errors:\n" + shaderFailures.join("\n"));
   assert.equal(runtimeErrors.length, 0, "Aster console errors:\n" + runtimeErrors.join("\n"));
   const star = join(screenshots, "aster-v2.png");
