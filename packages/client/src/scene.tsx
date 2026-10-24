@@ -61,20 +61,21 @@ type MainSceneProps = {
   selectedHeading: SelectedHeading;
   onHeadingPicked: (heading: PickedHeading) => void;
   planetFocusId: string;
+  opticalZoom: number;
 };
 
 export function MainScene({
   snapshot, mode, showHeadingSphere, showNavigationAids,
-  selectedHeading, onHeadingPicked, planetFocusId
+  selectedHeading, onHeadingPicked, planetFocusId, opticalZoom
 }: MainSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const samplesRef = useRef<Sample[]>([]);
   const latestRef = useRef(snapshot);
   latestRef.current = snapshot;
   const propsRef = useRef({
-    mode, showHeadingSphere, showNavigationAids, selectedHeading, onHeadingPicked, planetFocusId
+    mode, showHeadingSphere, showNavigationAids, selectedHeading, onHeadingPicked, planetFocusId, opticalZoom
   });
-  propsRef.current = { mode, showHeadingSphere, showNavigationAids, selectedHeading, onHeadingPicked, planetFocusId };
+  propsRef.current = { mode, showHeadingSphere, showNavigationAids, selectedHeading, onHeadingPicked, planetFocusId, opticalZoom };
 
   useEffect(() => {
     if (!snapshot) { samplesRef.current = []; return; }
@@ -298,16 +299,22 @@ export function MainScene({
           planetCamera.position, renderPosition.add(cameraArm), follow
         );
         planetCamera.setTarget(renderPosition.add(planetAimDirection.scale(10_000)));
+        const isTelescope = propsRef.current.mode === "planet" && propsRef.current.opticalZoom >= 4;
+        // Physical planet radius, range and angular diameter never change.
+        // Magnification narrows the *optical field of view*; when telescopic,
+        // hide local ship/station silhouettes to simulate a dedicated sensor.
+        planetCamera.fov = 0.8 / Math.max(1, propsRef.current.opticalZoom);
+        ship.setEnabled(!isTelescope);
         const local = latest.cruise.mode === "local";
         nav.update(pose, latest.ship, latest.tick, renderOrigin, {
-          sphere: local && propsRef.current.showHeadingSphere,
-          aids: local && propsRef.current.showNavigationAids && propsRef.current.mode !== "planet",
+          sphere: local && !isTelescope && propsRef.current.showHeadingSphere,
+          aids: local && !isTelescope && propsRef.current.showNavigationAids && propsRef.current.mode !== "planet",
           selected: propsRef.current.selectedHeading
         });
         plumes.update(latest.ship.acceleration, performance.now() / 1000);
         orbitalStation.update(
           getStarSystem(latest.universe.systemId), latest.universe.referenceBodyId,
-          latest.universe.frameOffsetMeters, renderOrigin, local
+          latest.universe.frameOffsetMeters, renderOrigin, local && !isTelescope
         );
         const activeCamera = scene.activeCamera!;
         const cameraOffset = activeCamera.globalPosition.subtract(renderPosition);
