@@ -1,0 +1,33 @@
+name: Planet rendering browser smoke
+
+on:
+  push:
+    branches: [feature/planetary-rendering-v2]
+  workflow_dispatch:
+
+# Rapid visual iteration should not leave dozens of obsolete GPU builds queued.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  chromium-planetary-view:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install
+      - run: npm run build
+      - run: npx playwright install chromium --with-deps
+      - run: node scripts/smoke-planet-browser.mjs
+      - name: Upload renderer screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: planetary-v2-screenshots
+          path: test-artifacts/
+          if-no-files-found: ignore
+          retention-days: 14

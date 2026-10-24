@@ -1,5 +1,7 @@
 import { DynamicTexture, type Scene } from "@babylonjs/core";
 import type { CelestialBody, PlanetAppearance } from "@bridge-sim/shared";
+import { fictionalOceanTerrain } from "./havenGeography";
+import { craterField } from "./craterTerrain";
 
 export type PlanetTextures = {
   surface: DynamicTexture;
@@ -69,24 +71,36 @@ const colorAt = (appearance: PlanetAppearance, latitude: number,
     return { color: [250 * spot, (133 + glow * 76) * spot, (35 + glow * 80) * spot], ocean: 0, land: false };
   }
 
-  const terrain = w;
   const detail = fractal(x * 29, y * 29, z * 29, seed + 101, 3);
+  const terrain = appearance.archetype === "ocean"
+    ? fictionalOceanTerrain(x, y, z, w, detail)
+    : w;
 
   if (appearance.archetype === "ocean") {
-    const land = terrain > 0.515;
+    const isPolarIce = absLat > 1.38 && detail > 0.29;
+    const land = terrain > 0;
     if (!land) {
-      const coast = saturate((terrain - 0.455) / 0.06);
-      return {
-        color: palette([10, 32, 79], [24, 122, 157], coast * 0.82 + detail * 0.17),
-        ocean: 1, land: false
-      };
+      // Deep navy ocean, turquoise continental shelves and gradual polar ice.
+      const shelf = saturate((terrain + 0.14) / 0.14);
+      let color = palette([4, 22, 55], [16, 113, 137], shelf * 0.83 + detail * 0.12);
+      if (absLat > 1.26) color = palette(color, [201, 226, 235],
+        (absLat - 1.26) * 3.7 * (0.3 + detail * 0.7));
+      return { color, ocean: isPolarIce ? 0 : 1, land: false };
     }
-    const elevation = saturate((terrain - 0.515) * 9);
-    let color = palette([58, 129, 91], [51, 86, 58], elevation + detail * 0.2);
-    const dryness = saturate((Math.cos(latitude * 3.3) + detail - 0.55) * 1.5);
-    color = palette(color, [178, 149, 91], dryness * 0.7);
-    if (elevation > 0.65) color = palette(color, [136, 140, 129], (elevation - 0.65) * 2);
-    if (absLat > 1.15) color = palette(color, [220, 231, 222], (absLat - 1.15) * 3.5);
+
+    const height = saturate(terrain * 4.4);
+    const ridge = 1 - Math.abs(fractal(x * 17, y * 17, z * 17, seed + 107, 3) * 2 - 1);
+    const mountainous = saturate((height - 0.41) * 1.6 + (ridge - 0.50) * 0.68);
+    const latitudeClimate = Math.abs(Math.sin(latitude * 3.7));
+    const aridity = saturate(0.12 + latitudeClimate * 0.6 +
+      (fractal(x * 7, y * 7, z * 7, seed + 903, 3) - 0.5) * 2.6);
+    let color = palette([50, 130, 85], [24, 68, 42], height * 0.8 + detail * 0.18);
+    color = palette(color, [187, 145, 88], aridity * 0.67);
+    const shoreline = 1 - saturate(terrain * 43);
+    color = palette(color, [174, 170, 121], shoreline * 0.63);
+    color = palette(color, [112, 120, 118], mountainous * 0.85);
+    const ice = saturate((absLat - 1.13) * 2.8 + (mountainous - 0.8) * 1.5);
+    color = palette(color, [220, 228, 229], ice);
     return { color, ocean: 0, land: true };
   }
   if (appearance.archetype === "rocky") {
@@ -96,24 +110,36 @@ const colorAt = (appearance: PlanetAppearance, latitude: number,
     return { color: palette(color, [223, 191, 151], bright * 0.3), ocean: 0, land: true };
   }
   if (appearance.archetype === "airless") {
-    const crater = Math.abs(Math.sin(87 * longitude + 31 * latitude + terrain * 12));
-    const grey = 65 + terrain * 105 + detail * 35 - crater * 12;
-    return { color: [grey, grey + 4, grey + 8], ocean: 0, land: true };
+    const impacts = craterField(x, y, z, seed);
+    const terrainShade = Math.max(0.0, terrain + detail * 0.32 + impacts * 1.5);
+    const grey = 48 + terrainShade * 111;
+    const rimHighlight = saturate(impacts * 4.1);
+    const shade = grey + rimHighlight * 35;
+    return { color: [shade * 0.92, shade * 0.96, shade + 7], ocean: 0, land: true };
   }
 
-  const band = Math.sin(latitude * (appearance.archetype === "ice-giant" ? 21 : 42) +
-    8 * (terrain - 0.5) + 2.5 * Math.sin(longitude * 4 + latitude * 13));
-  const turbulence = fractal(x * 18, y * 18, z * 18, seed + 829, 3) - 0.5;
-  const ripple = saturate(0.5 + band * 0.35 + turbulence * 0.3);
+  // Differentially rotating gas bands and coherent, elliptical major storms.
+  // The texture is generated on a unit sphere to avoid longitude seams.
+  const jet = latitude * (appearance.archetype === "ice-giant" ? 25 : 53)
+    + (terrain - 0.5) * 11
+    + Math.sin(longitude * 4 + latitude * 12) * 0.5;
+  const jetBand = Math.sin(jet) * 0.24 + Math.sin(jet * 2.23) * 0.10;
+  const turbulence = fractal(x * 19, y * 19, z * 19, seed + 829, 3) - 0.5;
+  const ripple = saturate(0.54 + jetBand + turbulence * 0.26);
   if (appearance.archetype === "gas-giant") {
-    let color = palette([117, 75, 67], [224, 180, 119], ripple);
-    const storm = Math.pow(Math.max(0, Math.sin(longitude - 1.3)), 18) *
-      Math.pow(Math.max(0, Math.cos((latitude + 0.36) * 6)), 7);
-    color = palette(color, [181, 88, 59], storm * 0.85);
+    let color = palette([108, 72, 67], [232, 193, 136], ripple);
+    const longitudeDiff = Math.atan2(Math.sin(longitude - 1.3), Math.cos(longitude - 1.3));
+    const stormRadius = Math.sqrt(
+      (longitudeDiff / 0.31) ** 2 + ((latitude + 0.34) / 0.17) ** 2
+    );
+    const stormCore = Math.exp(-Math.pow(stormRadius, 3.2));
+    const stormRim = Math.exp(-Math.pow((stormRadius - 1.1) / 0.29, 2));
+    color = palette(color, [175, 71, 52], stormCore * 0.9);
+    color = palette(color, [237, 208, 174], stormRim * 0.56);
     return { color, ocean: 0, land: false };
   }
   return {
-    color: palette([29, 96, 145], [132, 217, 223], ripple * 0.85),
+    color: palette([21, 82, 133], [132, 213, 226], ripple * 0.88),
     ocean: 0, land: false
   };
 };
@@ -150,22 +176,35 @@ export function generatePlanetTextures(scene: Scene, body: CelestialBody): Plane
       if (nightData) {
         const density = fractal(x * 26, y * 26, z * 26, seed + 701, 3);
         const cluster = fractal(x * 12, y * 12, z * 12, seed + 29, 3);
-        const brightness = result.land && Math.abs(latitude) < 1.14 &&
-          cluster > 0.52 && density > 0.5 ? saturate((density - 0.5) * 11) * 230 : 0;
+        // Settlements are concentrated near coastlines and moderate latitudes.
+        const nearCoast = Math.abs(fictionalOceanTerrain(x, y, z, shape, density));
+        const potential = Math.max(0, 1 - nearCoast * 13);
+        const brightness = result.land && Math.abs(latitude) < 1.20 &&
+          cluster > 0.49 && density > 0.50
+            ? saturate((density - 0.50) * 9) * potential * 235
+            : 0;
         nightData[p] = brightness;
         nightData[p + 1] = result.ocean ? 255 : 0; // Ocean mask packed into G.
         nightData[p + 2] = brightness;
         nightData[p + 3] = 255;
       }
       if (cloudData && a.clouds) {
-        const clouds = fractal(x * 7.5, y * 7.5, z * 7.5, seed + 901, 5);
-        const filaments = fractal(x * 30, y * 30, z * 30, seed + 111, 3);
-        const threshold = 0.48 + (0.5 - a.clouds.coverage) * 0.2;
-        const alpha = saturate((clouds + filaments * 0.14 - threshold - 0.05) * 10);
-        cloudData[p] = 220 + 33 * filaments;
-        cloudData[p + 1] = 227 + 25 * filaments;
-        cloudData[p + 2] = 233 + 21 * filaments;
-        cloudData[p + 3] = alpha * 220;
+        // One coherent low-pressure weather field with narrow filamentary edges.
+        // Keeps oceans and continents recognisable beneath thin clouds.
+        const curl = fractal(x * 4.2, y * 4.2, z * 4.2, seed + 901, 4);
+        const displacement = (curl - 0.5) * 0.33;
+        const clouds = fractal((x + displacement) * 11,
+          (y - displacement) * 11, (z + displacement * 0.5) * 11,
+          seed + 911, 4);
+        const filament = fractal(x * 32, y * 32, z * 32, seed + 111, 2);
+        const band = Math.sin(latitude * 11 + 4 * (curl - 0.5)) * 0.055;
+        const threshold = 0.54 + (0.5 - a.clouds.coverage) * 0.23;
+        const density = clouds + (filament - 0.5) * 0.26 + band - threshold;
+        const alpha = saturate(density * 7.5);
+        cloudData[p] = 224 + 26 * filament;
+        cloudData[p + 1] = 232 + 19 * filament;
+        cloudData[p + 2] = 239 + 14 * filament;
+        cloudData[p + 3] = alpha * 193;
       }
     }
   }

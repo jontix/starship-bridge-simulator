@@ -3,7 +3,8 @@ import { test } from "node:test";
 import { vec3 } from "./math.js";
 import { ASTER_REACH } from "./universe/aster-reach.js";
 import { validateStarSystem } from "./universe/registry.js";
-import { apparentBodyGeometry, choosePlanetFocus, discDiameterPixels } from "./universe/planet-geometry.js";
+import { apparentBodyGeometry, choosePlanetFocus, discDiameterPixels, lineOfSightBlocker } from "./universe/planet-geometry.js";
+import { systemPositionsAt } from "./universe/orbits.js";
 
 test("true-scale Haven horizon at Highport altitude", () => {
   const radius = 6_370_000;
@@ -68,4 +69,43 @@ test("visual definitions are system-data reusable and physically bounded", () =>
     } : body)
   };
   assert.throws(() => validateStarSystem(invalidSystem), /Invalid ring geometry/);
+});
+
+test("Aster can be occulted by Haven from Highport, depending on orbital phase", () => {
+  // Station orbits Haven once every 0.065 d. An apparently blank telescope
+  // during eclipse is physical, not a missing stellar shader.
+  const visibleEpoch = Date.UTC(2026, 9, 24, 20, 0, 0) / 1000;
+  const occultedEpoch = Date.UTC(2026, 9, 24, 20, 23, 0) / 1000;
+  const visiblePositions = systemPositionsAt(ASTER_REACH, visibleEpoch);
+  const occultedPositions = systemPositionsAt(ASTER_REACH, occultedEpoch);
+  const offset = ASTER_REACH.start.offsetFromReferenceMeters;
+  const viewpoint = (p: typeof visiblePositions) => ({
+    x: p["haven-highport"].x + offset.x,
+    y: p["haven-highport"].y + offset.y,
+    z: p["haven-highport"].z + offset.z
+  });
+
+  assert.equal(lineOfSightBlocker(ASTER_REACH, visiblePositions,
+    viewpoint(visiblePositions), "aster"), null);
+  assert.equal(lineOfSightBlocker(ASTER_REACH, occultedPositions,
+    viewpoint(occultedPositions), "aster")?.id, "haven");
+  // The obstructing planet's own centre is never treated as a blocker.
+  assert.equal(lineOfSightBlocker(ASTER_REACH, occultedPositions,
+    viewpoint(occultedPositions), "haven"), null);
+});
+
+test("ray-sphere blockers distinguish directions and nearest intersections", () => {
+  const synthetic = {
+    ...ASTER_REACH,
+    bodies: ASTER_REACH.bodies.filter(body => ["aster", "haven", "selene"].includes(body.id))
+      .map(body => ({ ...body, radiusMeters: body.id === "haven" ? 2 : 1 }))
+  };
+  const positions = {
+    aster: vec3(0, 0, 100),
+    haven: vec3(0, 0, 10),
+    selene: vec3(15, 0, 30)
+  };
+  assert.equal(lineOfSightBlocker(synthetic, positions, vec3(), "aster")?.id, "haven");
+  assert.equal(lineOfSightBlocker(synthetic, positions, vec3(8, 0, 0), "aster"), null);
+  assert.equal(lineOfSightBlocker(synthetic, positions, vec3(), "selene"), null);
 });

@@ -1,9 +1,14 @@
 name: Flight model checks
 on:
   push:
-    branches: [main, feature/flight-model-v1, feature/navigation-visuals, feature/first-star-system, feature/interplanetary-cruise, feature/planetary-rendering]
+    branches: [main, feature/flight-model-v1, feature/navigation-visuals, feature/first-star-system, feature/interplanetary-cruise, feature/planetary-rendering, feature/planetary-rendering-v2]
   pull_request:
-    branches: [main, feature/flight-model-v1, feature/navigation-visuals, feature/first-star-system, feature/interplanetary-cruise]
+    branches: [main, feature/flight-model-v1, feature/navigation-visuals, feature/first-star-system, feature/interplanetary-cruise, feature/planetary-rendering]
+# Rapid visual iteration should not leave dozens of obsolete GPU builds queued.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-test:
     runs-on: ${{ matrix.os }}
@@ -23,6 +28,8 @@ jobs:
       - run: npm install
       - run: npm run build
       - run: npm test
+      - run: node --import tsx --test packages/client/src/planetAppearance.test.ts
+      - run: node --import tsx --test packages/client/src/planetView.test.ts
       - run: node scripts/smoke-server.mjs
       - run: node scripts/smoke-universe.mjs
       - run: node scripts/smoke-cruise.mjs

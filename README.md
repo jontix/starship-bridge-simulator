@@ -158,6 +158,33 @@ behind the station, with a convincing curved horizon.
 No planet landing/terrain collision or full atmospheric flight physics yet.
 See [Planet Rendering design and acceptance tests](docs/planetary-rendering.md).
 
+## Planet Rendering v2 — Babylon.js visual overhaul
+
+The `feature/planetary-rendering-v2` branch is an experimental
+**planetary and stellar art overhaul**, retaining every astronomical and
+flight-model scale.
+
+- Haven gains authored fictional continents, distinctive coastlines, ocean
+  shallows, biome variation, thinner rotating clouds and coastal city lights.
+- Atmosphere is calculated by integrating scattering-like density along the
+  camera ray through a spherical shell, with smooth atmospheric falloff.
+- Selene has proper circular craters; Bastion has gas bands and an elliptical
+  storm; Aster has its own animated granulation shader and a soft corona.
+- The ship gains directional light from Aster's actual ephemeris, subtle
+  planetary fill, a matte PBR hull and illuminated observation details.
+- Optionally bundle professionally produced equirectangular `albedo`,
+  `clouds` and `night` maps in
+  `packages/client/src/assets/planets/<body-id>/`.
+  Generated textures remain an offline fallback.
+- Runs both flight/unit CI and a real Chromium/WebGL visual smoke that
+  uploads Haven and Aster screenshots as build artifacts.
+
+These are **look-development approximations**, not yet full photorealistic
+scattering or close-range planetary terrain.
+
+Full renderer architecture and manual checks:
+[Planet Rendering v2](docs/planetary-rendering-v2.md).
+
 ## Monorepo
 
 - `packages/shared` — flight math, simulation, commands and tests

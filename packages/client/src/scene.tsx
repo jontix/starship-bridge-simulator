@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import {
-  ArcRotateCamera, Color3, Engine, FreeCamera, HemisphericLight, MeshBuilder,
+  ArcRotateCamera, Color3, Engine, FreeCamera, MeshBuilder,
   PointerEventTypes, Quaternion, Scene, StandardMaterial, Vector3
 } from "@babylonjs/core";
 import {
@@ -14,6 +14,7 @@ import {
 } from "./navigationVisuals";
 import { createReferenceStation } from "./celestialScene";
 import { createPlanetaryBackground } from "./planetaryScene";
+import { createSpaceLighting, upgradeShipAppearance } from "./shipLighting";
 
 export type CameraMode = "orbit" | "chase" | "tactical" | "sector" | "planet";
 type Sample = { snapshot: GameSnapshot; receivedAt: number };
@@ -60,20 +61,21 @@ type MainSceneProps = {
   selectedHeading: SelectedHeading;
   onHeadingPicked: (heading: PickedHeading) => void;
   planetFocusId: string;
+  opticalZoom: number;
 };
 
 export function MainScene({
   snapshot, mode, showHeadingSphere, showNavigationAids,
-  selectedHeading, onHeadingPicked, planetFocusId
+  selectedHeading, onHeadingPicked, planetFocusId, opticalZoom
 }: MainSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const samplesRef = useRef<Sample[]>([]);
   const latestRef = useRef(snapshot);
   latestRef.current = snapshot;
   const propsRef = useRef({
-    mode, showHeadingSphere, showNavigationAids, selectedHeading, onHeadingPicked, planetFocusId
+    mode, showHeadingSphere, showNavigationAids, selectedHeading, onHeadingPicked, planetFocusId, opticalZoom
   });
-  propsRef.current = { mode, showHeadingSphere, showNavigationAids, selectedHeading, onHeadingPicked, planetFocusId };
+  propsRef.current = { mode, showHeadingSphere, showNavigationAids, selectedHeading, onHeadingPicked, planetFocusId, opticalZoom };
 
   useEffect(() => {
     if (!snapshot) { samplesRef.current = []; return; }
@@ -134,11 +136,10 @@ export function MainScene({
       }
     };
 
-    new HemisphericLight("ambient", new Vector3(0.4, 1, 0.2), scene).intensity = 0.85;
+    const illumination = createSpaceLighting(scene);
     const ship = MeshBuilder.CreateBox("ship-hull", { width: 8, height: 3, depth: 18 }, scene);
     ship.rotationQuaternion = Quaternion.Identity();
-    const hullMaterial = new StandardMaterial("hull-material", scene);
-    hullMaterial.diffuseColor = new Color3(0.45, 0.72, 1);
+    const hullMaterial = upgradeShipAppearance(scene, ship);
     ship.material = hullMaterial;
     ship.isPickable = false;
 
@@ -266,8 +267,15 @@ export function MainScene({
           propsRef.current.planetFocusId
         );
         const absoluteShip = shipPositionFromSnapshot(liveSystem, visualSnapshot);
+        const starId = liveSystem.bodies.find(body => body.kind === "star")?.id;
+        const starPosition = starId
+          ? bodyPositionAt(liveSystem, starId, visualSnapshot.universe.epochSeconds)
+          : { x: 0, y: 0, z: 0 };
         const bodySystemPosition = bodyPositionAt(
           liveSystem, focusedWorld.id, visualSnapshot.universe.epochSeconds
+        );
+        illumination.update(
+          absoluteShip, starPosition, bodySystemPosition, focusedWorld.radiusMeters
         );
         const focusDirection = normalize(sub(bodySystemPosition, absoluteShip));
         // In low orbit the planet subtends >100 degrees: aim near the limb
@@ -279,7 +287,11 @@ export function MainScene({
         const up = Vector3.Up().subtract(planetUnit.scale(Vector3.Dot(planetUnit, Vector3.Up())));
         if (up.lengthSquared() < 0.001) up.copyFrom(Vector3.Right());
         up.normalize();
-        const framingOffset = Math.max(0, Math.min(1.43, angularRadius - 0.17));
+        const isTelescope = propsRef.current.mode === "planet" && propsRef.current.opticalZoom >= 4;
+        // Telescope targets the resolved surface/disc itself. At 1x, frame the
+        // limb and ship together for a cinematic but still accurate panorama.
+        const framingOffset = isTelescope ? 0 :
+          Math.max(0, Math.min(1.43, angularRadius - 0.17));
         const planetAimDirection = planetUnit.scale(Math.cos(framingOffset))
           .add(up.scale(Math.sin(framingOffset))).normalize();
         // Position the camera *behind this aim direction*, not behind the
@@ -290,24 +302,33 @@ export function MainScene({
         planetCamera.position = Vector3.Lerp(
           planetCamera.position, renderPosition.add(cameraArm), follow
         );
-        planetCamera.setTarget(renderPosition.add(planetAimDirection.scale(10_000)));
+        // Aim at a mathematically distant point. At 32× a target only 10km
+        // away introduces enough parallax from the camera's 35m sidestep to
+        // push a half-degree star out of its 1.43° telescope field of view.
+        planetCamera.setTarget(renderPosition.add(planetAimDirection.scale(10_000_000)));
+        // Physical planet radius, range and angular diameter never change.
+        // Magnification narrows the *optical field of view*; when telescopic,
+        // hide local ship/station silhouettes to simulate a dedicated sensor.
+        planetCamera.fov = 0.8 / Math.max(1, propsRef.current.opticalZoom);
+        ship.setEnabled(!isTelescope);
         const local = latest.cruise.mode === "local";
         nav.update(pose, latest.ship, latest.tick, renderOrigin, {
-          sphere: local && propsRef.current.showHeadingSphere,
-          aids: local && propsRef.current.showNavigationAids && propsRef.current.mode !== "planet",
+          sphere: local && !isTelescope && propsRef.current.showHeadingSphere,
+          aids: local && !isTelescope && propsRef.current.showNavigationAids && propsRef.current.mode !== "planet",
           selected: propsRef.current.selectedHeading
         });
         plumes.update(latest.ship.acceleration, performance.now() / 1000);
         orbitalStation.update(
           getStarSystem(latest.universe.systemId), latest.universe.referenceBodyId,
-          latest.universe.frameOffsetMeters, renderOrigin, local
+          latest.universe.frameOffsetMeters, renderOrigin, local && !isTelescope
         );
         const activeCamera = scene.activeCamera!;
         const cameraOffset = activeCamera.globalPosition.subtract(renderPosition);
         planetarySky.update(
           visualSnapshot, activeCamera, { x: cameraOffset.x, y: cameraOffset.y, z: cameraOffset.z },
           propsRef.current.planetFocusId, engine.getRenderHeight(),
-          propsRef.current.showNavigationAids
+          propsRef.current.showNavigationAids,
+          propsRef.current.mode !== "tactical"
         );
         const cruiseSpeed = latest.cruise.speedMetersPerSecond;
         streaks.setEnabled(!local && cruiseSpeed > 5_000);

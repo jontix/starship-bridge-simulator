@@ -37,6 +37,55 @@ export function discDiameterPixels(angularRadiusRadians: number, verticalFovRadi
   return 2 * Math.tan(angularRadiusRadians) / Math.tan(verticalFovRadians / 2) * (canvasHeightPx / 2);
 }
 
+
+/**
+ * Find the nearest solid world obstructing the line from a camera/ship to the
+ * CENTER of the selected body. All intersection work uses metre-valued double
+ * precision; this is deliberately independent of Babylon's sky proxy meshes.
+ *
+ * A centreline obstruction is not necessarily a total eclipse: part of a
+ * target's disc may remain visible beside the nearer world's limb.
+ */
+export function lineOfSightBlocker(
+  system: StarSystem,
+  positions: Readonly<Record<string, Vec3>>,
+  cameraPosition: Vec3,
+  targetId: string
+): CelestialBody | null {
+  const targetPosition = positions[targetId];
+  if (!targetPosition) throw new Error("Unknown target body " + targetId);
+  const toTarget = sub(targetPosition, cameraPosition);
+  const targetDistance = length(toTarget);
+  if (!(targetDistance > 0)) return null;
+  const inverseDistance = 1 / targetDistance;
+  const direction = {
+    x: toTarget.x * inverseDistance,
+    y: toTarget.y * inverseDistance,
+    z: toTarget.z * inverseDistance
+  };
+  let nearestEntry = targetDistance;
+  let nearest: CelestialBody | null = null;
+  for (const body of system.bodies) {
+    if (body.kind === "station" || body.id === targetId) continue;
+    const center = positions[body.id];
+    if (!center) continue;
+    const fromCamera = sub(center, cameraPosition);
+    const projection = fromCamera.x * direction.x +
+      fromCamera.y * direction.y + fromCamera.z * direction.z;
+    if (projection <= 0) continue;
+    const perpendicularSq = Math.max(0,
+      fromCamera.x * fromCamera.x + fromCamera.y * fromCamera.y +
+      fromCamera.z * fromCamera.z - projection * projection);
+    const radiusSq = body.radiusMeters * body.radiusMeters;
+    if (perpendicularSq >= radiusSq) continue;
+    const nearIntersection = projection - Math.sqrt(radiusSq - perpendicularSq);
+    if (nearIntersection < 0 || nearIntersection >= nearestEntry) continue;
+    nearestEntry = nearIntersection;
+    nearest = body;
+  }
+  return nearest;
+}
+
 /** Select the navigational world associated with an orbital station or moon.
  * Prefer the current cruise target, otherwise the co-moving local frame.
  */

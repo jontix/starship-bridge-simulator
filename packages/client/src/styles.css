@@ -259,3 +259,73 @@ kbd { display: inline-block; background: #0b1727; color: #c2d5e9; border: 1px so
   padding: 10px;
 }
 .map-focus-world:hover { background: #1c5765; }
+
+/* Optical close-up guidance: physically large planets fill a narrow telescope
+ * field; do not silently present the night-side surface as a broken black sky. */
+.planet-zoom-explanation {
+  margin-top: 12px;
+  padding: 10px 11px;
+  border: 1px solid rgba(112, 194, 218, .5);
+  border-left: 3px solid #73d4e9;
+  border-radius: 7px;
+  background: rgba(18, 51, 66, .9);
+  color: #d8f1fa;
+}
+.planet-zoom-explanation strong {
+  display: block;
+  font-size: 12px;
+  letter-spacing: .02em;
+}
+.planet-zoom-explanation p {
+  margin: 7px 0 10px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.planet-reset-zoom {
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 5px;
+  background: #245876;
+  border: 1px solid #66bcda;
+  color: #f5fdff;
+  font-size: 11px;
+  font-weight: 600;
+}
+.planet-reset-zoom:hover { background: #31708c; }
+
+/* In-viewscreen optical telemetry, outside scrollable station panels. */
+.telescope-sightline-banner {
+  position: absolute;
+  left: 318px;
+  top: 18px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  max-width: min(430px, calc(100vw - 340px));
+  padding: 13px 15px;
+  background: rgba(8, 22, 34, .94);
+  border: 1px solid #5e98af;
+  border-radius: 10px;
+  color: #dbeefa;
+  box-shadow: 0 8px 35px rgba(0,0,0,.3);
+  font-size: 12px;
+  line-height: 1.42;
+}
+.telescope-sightline-banner strong { color: #f3fbff; font-size: 13px; }
+.telescope-sightline-banner > span { color: #abc9d8; }
+.telescope-sightline-banner > button {
+  align-self: flex-start;
+  width: auto;
+  font-size: 11px;
+  padding: 6px 12px;
+  margin-top: 4px;
+  background: #245c71;
+  border-color: #6faac7;
+}
+@media (max-width: 750px) {
+  .telescope-sightline-banner {
+    left: 12px; right: 12px; top: auto; bottom: 38px;
+    max-width: none;
+  }
+}
