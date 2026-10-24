@@ -5,7 +5,7 @@ import {
 } from "./math.js";
 import { applyHelmCommand, createInitialShipState, SHIP_LIMITS, stepShip } from "./simulation.js";
 import { HelmCommandSchema } from "./types.js";
-import { directionToHeading, headingToDirection, quatFromAttitude, rotateVector, sub } from "./math.js";
+import { directionToHeading, headingToDirection, sub } from "./math.js";
 
 const tick = 1 / 30;
 const advance = (ship: ReturnType<typeof createInitialShipState>, seconds: number) => {
