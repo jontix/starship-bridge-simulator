@@ -132,8 +132,8 @@ const colorAt = (appearance: PlanetAppearance, latitude: number,
     const stormRadius = Math.sqrt(
       (longitudeDiff / 0.31) ** 2 + ((latitude + 0.34) / 0.17) ** 2
     );
-    const stormCore = Math.exp(-stormRadius ** 3.2);
-    const stormRim = Math.exp(-((stormRadius - 1.1) / 0.29) ** 2);
+    const stormCore = Math.exp(-Math.pow(stormRadius, 3.2));
+    const stormRim = Math.exp(-Math.pow((stormRadius - 1.1) / 0.29, 2));
     color = palette(color, [175, 71, 52], stormCore * 0.9);
     color = palette(color, [237, 208, 174], stormRim * 0.56);
     return { color, ocean: 0, land: false };
