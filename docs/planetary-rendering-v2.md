@@ -100,12 +100,25 @@ Both bridge stations now expose **Optical magnification (1×–32×)** when usin
 - At **4× to 32×**, the view is explicitly a telescope/sensor feed. It points
   at the physical disc centre and hides local ship/station geometry. This
   changes camera field of view, **not** astronomical coordinates or object size.
-- At **32×** Aster should be a fully resolved stellar disc from Haven orbit,
-  suitable for comparing activity, surface shading and the corona.
+- At **32×** Aster should be a fully resolved stellar disc **when it is above
+  the local planetary horizon**, suitable for inspecting surface shading and
+  the corona. If Haven lies between Highport and Aster, the star is
+  legitimately eclipsed and the view is blocked by Haven's surface.
+- The new **Centre sightline** readout reports `Clear` or
+  `Blocked by Haven` (or another nearer body). This is ray–sphere
+  interception using true metre-valued orbits, not arbitrary visibility based
+  on renderer draw order. A centreline obstruction does not imply that every
+  part of a large target disc is hidden.
 - Magnification is local to the browser. Helm commands, cruise navigation and
   multiplayer shared state are unaffected.
 
-The headless Chromium smoke test captures Aster at 32×.
+The headless Chromium smoke test captures Aster at 32× from an
+**unobstructed, fixed orbital phase**: 24 October 2026, 20:00 UTC.
+The normal game server still initializes ephemerides from real UTC time.
+The test server alone uses `BRIDGE_TEST_START_EPOCH_SECONDS`, making visual
+screenshots reproducible regardless of when CI runs. Pure tests additionally
+verify that Aster *is* eclipsed by Haven at 20:23 UTC from Highport (on the
+same date).
 
 ## Testing
 
