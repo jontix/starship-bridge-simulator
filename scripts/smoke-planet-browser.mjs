@@ -144,9 +144,11 @@ try {
   assert.ok(warmBackgroundPixels < 400,
     "Tactical instrument sky still contains an enormous orange planet: " + warmBackgroundPixels);
   console.log("Captured uncluttered tactical instrument view:", tactical);
-  await page.getByLabel("Camera mode").selectOption("planet");
 
+  // Selecting an optical target from Tactical must *switch* the camera,
+  // not leave crew adjusting a telescope while looking at a tactical grid.
   await page.getByLabel("Focused planet").selectOption("aster");
+  assert.equal(await page.getByLabel("Camera mode").inputValue(), "planet");
   await page.getByLabel("Optical magnification").selectOption("32");
   await page.getByText("Centre sightline").locator("..").getByText("Clear").waitFor({
     timeout: 10_000
