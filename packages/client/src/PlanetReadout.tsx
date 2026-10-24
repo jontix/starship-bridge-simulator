@@ -69,8 +69,9 @@ export function PlanetViewControls({
     </p>}
     <p className="subtle planet-view-hint">
       Globes have actual angular scale in 3D. System Map icons remain schematic.
-      Select <strong>Planet / orbital</strong> camera for a dedicated world-facing view.
-      At 4× or greater this becomes a telescope feed, hiding the local ship and station
+      Changing the target or magnification automatically opens the
+      <strong> Planet / orbital</strong> camera. At 4× or greater this becomes
+      a telescope feed, hiding the local ship and station
       while preserving every object's true angular scale. To inspect Aster, choose
       <strong> Aster · star</strong> above: Automatic targets the nearby world, Haven.
     </p>
