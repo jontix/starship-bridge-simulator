@@ -1,0 +1,1 @@
+{"name":"bridge-sim-prototype","private":true,"version":"0.1.0","workspaces":["packages/*"],"scripts":{"dev":"concurrently \"npm run dev -w @bridge/server\" \"npm run dev -w @bridge/client\"","build":"npm run build -w @bridge/shared && npm run build -w @bridge/server && npm run build -w @bridge/client"},"devDependencies":{"concurrently":"^9.0.0","typescript":"^5.6.0"}}
