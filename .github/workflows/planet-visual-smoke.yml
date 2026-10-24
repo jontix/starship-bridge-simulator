@@ -2,7 +2,7 @@ name: Planet rendering browser smoke
 
 on:
   push:
-    branches: [feature/planetary-rendering-v2]
+    branches: [feature/planetary-rendering-v2, feature/procedural-planet-generator-v1]
   workflow_dispatch:
 
 # Rapid visual iteration should not leave dozens of obsolete GPU builds queued.
@@ -23,6 +23,7 @@ jobs:
       - run: npm run build
       - run: npx playwright install chromium --with-deps
       - run: node scripts/smoke-planet-browser.mjs
+      - run: node scripts/smoke-planet-lab.mjs
       - name: Upload renderer screenshots
         if: always()
         uses: actions/upload-artifact@v4
