@@ -66,9 +66,17 @@ export function MainScene({
   useEffect(() => {
     if (!snapshot) { samplesRef.current = []; return; }
     const samples = samplesRef.current;
-    if (samples.length > 0 && snapshot.tick <= samples[samples.length - 1].snapshot.tick) return;
-    samples.push({ snapshot, receivedAt: performance.now() });
-    if (samples.length > 12) samples.splice(0, samples.length - 12);
+    const previous = samples.at(-1)?.snapshot;
+    // Impulse frames are intentionally local; a drop from cruise establishes a
+    // new local origin. Never interpolate old-frame and new-frame coordinates.
+    if (previous && (previous.universe.referenceBodyId !== snapshot.universe.referenceBodyId ||
+      previous.cruise.mode === "local" !== (snapshot.cruise.mode === "local"))) {
+      samplesRef.current = [];
+    }
+    const currentSamples = samplesRef.current;
+    if (currentSamples.length > 0 && snapshot.tick <= currentSamples[currentSamples.length - 1].snapshot.tick) return;
+    currentSamples.push({ snapshot, receivedAt: performance.now() });
+    if (currentSamples.length > 12) currentSamples.splice(0, currentSamples.length - 12);
   }, [snapshot]);
 
   useEffect(() => {
@@ -141,9 +149,30 @@ export function MainScene({
     const nav = createNavigationVisuals(scene);
     const orbitalStation = createReferenceStation(scene);
     const celestialSky = createDistantBodyMarkers(scene);
+    // Stylised ship-relative star streaks, only a visual feedback cue for
+    // effective cruise velocity (not literal nearby stars or 3D travel distance).
+    let rng = 423143;
+    const random = () => {
+      rng = (rng * 1664525 + 1013904223) >>> 0;
+      return rng / 0x100000000;
+    };
+    const streakSegments = Array.from({ length: 180 }, () => {
+      const x = (random() - 0.5) * 160;
+      const y = (random() - 0.5) * 120;
+      const z = (random() - 0.5) * 450;
+      return [new Vector3(x, y, z), new Vector3(x, y, z + 18)];
+    });
+    const streaks = MeshBuilder.CreateLineSystem("superluminal-drive-streaks", {
+      lines: streakSegments
+    }, scene);
+    streaks.parent = ship;
+    streaks.color = new Color3(0.22, 0.85, 1);
+    streaks.alpha = 0.63;
+    streaks.isPickable = false;
     // The physics remains in stable double-valued local metres, but Babylon gets
     // rebased coordinates within about 1km of the camera to preserve GPU precision.
     const renderOrigin = Vector3.Zero();
+    let lastRenderFrameKey = "";
 
     const pickObserver = scene.onPointerObservable.add((pointerInfo) => {
       if (pointerInfo.type !== PointerEventTypes.POINTERPICK || !propsRef.current.showHeadingSphere) return;
@@ -156,6 +185,16 @@ export function MainScene({
       const pose = interpolatedPose(samplesRef.current, performance.now() - INTERPOLATION_DELAY_MS);
       const latest = latestRef.current;
       if (pose && latest) {
+        const frameKey = latest.universe.referenceBodyId + ":" +
+          (latest.cruise.mode === "local" ? "local" : "cruise");
+        if (frameKey !== lastRenderFrameKey) {
+          lastRenderFrameKey = frameKey;
+          nav.resetTrail();
+          // Start the new local scene without extrapolating from an old frame.
+          orbit.target.copyFrom(pose.position);
+          tactical.target.copyFrom(pose.position);
+          sector.target.copyFrom(pose.position);
+        }
         const nearOrigin = computeFloatingOrigin({
           x: pose.position.x, y: pose.position.y, z: pose.position.z
         });
@@ -185,14 +224,24 @@ export function MainScene({
         chase.upVector.copyFrom(toVector(rotateVector(q, vec3(0, 1, 0))));
         const lookAhead = toVector(rotateVector(q, vec3(0, 0, 60)));
         chase.setTarget(renderPosition.add(lookAhead));
+        const local = latest.cruise.mode === "local";
         nav.update(pose, latest.ship, latest.tick, renderOrigin, {
-          sphere: propsRef.current.showHeadingSphere,
-          aids: propsRef.current.showNavigationAids,
+          sphere: local && propsRef.current.showHeadingSphere,
+          aids: local && propsRef.current.showNavigationAids,
           selected: propsRef.current.selectedHeading
         });
         plumes.update(latest.ship.acceleration, performance.now() / 1000);
-        orbitalStation.update(getStarSystem(latest.universe.systemId), renderOrigin, true);
+        orbitalStation.update(
+          getStarSystem(latest.universe.systemId), latest.universe.referenceBodyId,
+          latest.universe.frameOffsetMeters, renderOrigin, local
+        );
         celestialSky.update(latest, renderPosition, propsRef.current.showNavigationAids);
+        const cruiseSpeed = latest.cruise.speedMetersPerSecond;
+        streaks.setEnabled(!local && cruiseSpeed > 5_000);
+        if (!local && cruiseSpeed > 5_000) {
+          streaks.scaling.z = 0.4 + Math.min(5, cruiseSpeed / 180_000_000);
+          streaks.position.z = ((performance.now() / 12) % 450) - 225;
+        }
       }
       scene.render();
     });
