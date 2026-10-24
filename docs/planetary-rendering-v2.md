@@ -88,6 +88,25 @@ This is not a finished ship art asset.
 Cloud opacity is reduced and the cloud shader's backside is culled, fixing
 the white, doubled layers previously hiding most of Haven.
 
+## Optical inspection camera
+
+A Sun-like star at approximately 1 AU is only about **0.5° wide**. That is
+correct at 1× magnification, but not enough to inspect its granulation.
+Both bridge stations now expose **Optical magnification (1×–32×)** when using
+`Planet / orbital panorama`:
+
+- At **1× or 2×**, the camera remains a third-person ship view with Haven's
+  actual curved orbital horizon.
+- At **4× to 32×**, the view is explicitly a telescope/sensor feed. It points
+  at the physical disc centre and hides local ship/station geometry. This
+  changes camera field of view, **not** astronomical coordinates or object size.
+- At **32×** Aster should be a fully resolved stellar disc from Haven orbit,
+  suitable for comparing activity, surface shading and the corona.
+- Magnification is local to the browser. Helm commands, cruise navigation and
+  multiplayer shared state are unaffected.
+
+The headless Chromium smoke test captures Aster at 32×.
+
 ## Testing
 
 Pure tests cover deterministic coastline geometry, spherical seam/pole
