@@ -265,9 +265,9 @@ export function MainScene({
           latest.universe.frameOffsetMeters, renderOrigin, local
         );
         const activeCamera = scene.activeCamera!;
-        const offset = activeCamera.globalPosition.subtract(renderPosition);
+        const cameraOffset = activeCamera.globalPosition.subtract(renderPosition);
         planetarySky.update(
-          latest, activeCamera, { x: offset.x, y: offset.y, z: offset.z },
+          latest, activeCamera, { x: cameraOffset.x, y: cameraOffset.y, z: cameraOffset.z },
           propsRef.current.planetFocusId, engine.getRenderHeight(),
           propsRef.current.showNavigationAids
         );
