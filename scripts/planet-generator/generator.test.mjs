@@ -81,6 +81,21 @@ test("build CLI writes PNG maps, diagnostics and a hashed manifest",async()=>{
   }finally{await rm(root,{recursive:true,force:true});}
 });
 
+test("startup reuses edited planet seeds instead of overwriting them with defaults",async()=>{
+  const root=await mkdtemp(join(tmpdir(),"bridge-planet-cache-"));
+  try{
+    const paths={assetRoot:join(root,"game"),previewRoot:join(root,"lab")};
+    const first=await buildAssets({...paths,width:128,seed:73199});
+    const imageHash=first.manifest.files["albedo.png"];
+    const cached=await buildAssets({...paths,width:128,seed:48271,ifMissing:true});
+    assert.equal(cached.manifest.options.seed,73199);
+    assert.equal(cached.manifest.files["albedo.png"],imageHash);
+    const replaced=await buildAssets({...paths,width:128,seed:48271});
+    assert.equal(replaced.manifest.options.seed,48271);
+    assert.notEqual(replaced.manifest.files["albedo.png"],imageHash);
+  }finally{await rm(root,{recursive:true,force:true});}
+});
+
 test("invalid seed, ocean fraction, sizes and malformed CLI are rejected",()=>{
   for(const o of [{width:111},{width:10000},{seed:-3},{oceanCoverage:1.1},{moisture:Infinity}])
     assert.throws(()=>validateOptions(o));
