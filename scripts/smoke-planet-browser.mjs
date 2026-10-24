@@ -10,6 +10,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as sleep } from "node:timers/promises";
 import { chromium } from "playwright";
+import { PNG } from "pngjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const screenshots = join(root, "test-artifacts");
@@ -110,12 +111,28 @@ try {
 
   await page.getByLabel("Focused planet").selectOption("aster");
   await page.getByLabel("Optical magnification").selectOption("32");
-  await sleep(1800);
+  await sleep(3200);
   assert.equal(shaderFailures.length, 0, "Aster shader compilation errors:\n" + shaderFailures.join("\n"));
   assert.equal(runtimeErrors.length, 0, "Aster console errors:\n" + runtimeErrors.join("\n"));
   const star = join(screenshots, "aster-v2.png");
-  await page.screenshot({ path: star, fullPage: true, animations: "disabled" });
-  console.log("Captured Aster stellar view:", star);
+  const pixels = PNG.sync.read(await page.screenshot({
+    path: star, fullPage: true, animations: "disabled"
+  }));
+  // Check actual composed pixels, not just shader compilation: a 32x
+  // star must produce a visibly warm disc outside the bridge side panel.
+  let warmDiscPixels = 0;
+  for (let y = 95; y < Math.min(pixels.height - 45, 800); y += 2) {
+    for (let x = 345; x < pixels.width - 40; x += 2) {
+      const offset = (y * pixels.width + x) * 4;
+      const red = pixels.data[offset];
+      const green = pixels.data[offset + 1];
+      const blue = pixels.data[offset + 2];
+      if (red > 115 && red > green + 12 && green > blue + 9) warmDiscPixels++;
+    }
+  }
+  assert.ok(warmDiscPixels > 180,
+    "32x telescope star not visibly in frame; warm disc pixel count=" + warmDiscPixels);
+  console.log("Captured resolved Aster stellar disc:", star, "warm pixels=", warmDiscPixels);
   await context.close();
   console.log("Planetary browser smoke passed: both shaders, connected multiplayer session, valid WebGL and screenshots");
 } catch (error) {
