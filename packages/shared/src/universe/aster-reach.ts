@@ -54,7 +54,8 @@ const bodies: CelestialBody[] = [
     orbit: orbit(5.25 * AU, years(12.05), 0.048, 1.3, 77, 270, 340),
     description: "A massive gas giant with a long orbital period.",
     appearance: { archetype: "gas-giant", seed: 89011, axialTiltRadians: rad(3.1), rotationPeriodSeconds: days(0.42),
-      atmosphere: { colorHex: "#efc8a3", thicknessMeters: km(850) } }
+      atmosphere: { colorHex: "#efc8a3", thicknessMeters: km(850) },
+      rings: { innerRadiusRatio: 1.36, outerRadiusRatio: 2.25, colorHex: "#e3d4bb" } }
   },
   {
     id: "tundra", name: "Tundra", kind: "planet", parentId: "aster",
