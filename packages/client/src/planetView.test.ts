@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  ASTER_REACH, createCruiseState, createInitialShipState, type GameSnapshot
+  DEFAULT_SYSTEM_ID, getStarSystem, createCruiseState, createInitialShipState, type GameSnapshot
 } from "@bridge-sim/shared";
+const ASTER_REACH = getStarSystem(DEFAULT_SYSTEM_ID);
 import { assessPlanetView } from "./planetView";
 
 const time = (hour: number, minute: number) =>
