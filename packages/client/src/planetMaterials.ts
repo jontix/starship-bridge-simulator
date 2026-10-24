@@ -3,6 +3,7 @@ import {
 } from "@babylonjs/core";
 import type { CelestialBody } from "@bridge-sim/shared";
 import type { PlanetTextures } from "./planetTextures";
+import { surfaceDetailNoiseGLSL, surfaceDetailApplyGLSL, cloudDetailApplyGLSL } from "./surfaceDetailShader";
 
 /**
  * All shading takes place in the camera-relative planetary sky, NOT the
@@ -43,6 +44,7 @@ uniform float nightIntensity;
 uniform float oceanIntensity;
 uniform float stellar;
 uniform float contrastGain;
+${surfaceDetailNoiseGLSL}
 const float PI = 3.14159265;
 
 void main(void) {
@@ -50,7 +52,6 @@ void main(void) {
   vec3 n = normalize(vNormal);
   vec3 toSun = normalize(sunDirection);
   vec3 toEye = normalize(-vWorldPosition);
-  float cosSun = dot(n, toSun);
   if (stellar > 0.5) {
     // Physically motivated stellar limb darkening: brighter at disc centre.
     float mu = max(0.0, dot(n, toEye));
@@ -60,9 +61,14 @@ void main(void) {
     return;
   }
 
-  // Work roughly in linear-light space. Surface maps are artist-graded sRGB
-  // and must not be applied as flat emissive colours (the v1 washed-out look).
+  // Work roughly in linear-light space. Surface maps are artist-graded sRGB.
   vec3 albedo = pow(max(texel.rgb, vec3(0.0)), vec3(2.15));
+  vec4 secondary = texture2D(nightSampler, vUV);
+
+  // Apply the deterministic detail only after loading coarse surface and
+  // water masks; the planetary seed remains anchored to body coordinates.
+  ${surfaceDetailApplyGLSL}
+  float cosSun = dot(n, toSun);
   float sun = max(0.0, cosSun);
   float terminator = smoothstep(-0.04, 0.06, cosSun);
   // Artistic exposure floor approximating reflected skylight and starshine:
@@ -74,7 +80,6 @@ void main(void) {
 
   // Separate ocean reflectance data lives in the G channel of the night map.
   // Rough, dim land; tight, coloured, star-reflecting ocean specularity.
-  vec4 secondary = texture2D(nightSampler, vUV);
   float ocean = secondary.g * oceanIntensity;
   vec3 halfVector = normalize(toSun + toEye);
   float specAngle = max(0.0, dot(n, halfVector));
@@ -103,6 +108,7 @@ varying vec2 vUV;
 uniform sampler2D cloudSampler;
 uniform vec3 sunDirection;
 uniform float cloudOpacity;
+${surfaceDetailNoiseGLSL}
 void main(void) {
   vec4 cloud = texture2D(cloudSampler, vUV);
   vec3 n = normalize(vNormal);
@@ -111,6 +117,7 @@ void main(void) {
   // Thin veils are translucent, thick convective cloud banks stay bright.
   // Avoid the solid opaque white layer that hid most of Haven in v1.
   float opacity = cloud.a * cloudOpacity;
+  ${cloudDetailApplyGLSL}
   if (opacity < 0.008) discard;
   vec3 white = mix(vec3(0.018, 0.031, 0.055),
                    vec3(0.86, 0.91, 0.97) * (0.57 + 0.40 * max(0.0, illumination)),
@@ -280,9 +287,12 @@ function shader(scene: Scene, name: string, kind: string, transparent = false): 
       "world", "worldViewProjection", "sunDirection", "nightIntensity",
       "oceanIntensity", "stellar", "contrastGain", "cloudOpacity",
       "atmosphereColor", "planetCenter", "planetRadius", "atmosphereRadius",
-      "atmosphereDensity", "stellarTime", "stellarActivity"
+      "atmosphereDensity", "stellarTime", "stellarActivity",
+      "detailStrength", "detailScale", "detailPixelRadians",
+      "detailProxyRadius", "detailSeed"
     ],
-    samplers: ["surfaceSampler", "nightSampler", "cloudSampler"],
+    samplers: ["surfaceSampler", "nightSampler", "cloudSampler",
+      "heightSampler", "roughnessSampler"],
     needAlphaBlending: transparent,
     needAlphaTesting: false
   });
@@ -294,10 +304,18 @@ export function surfaceMaterial(scene: Scene, body: CelestialBody, textures: Pla
   const material = shader(scene, body.id + "-surface-v2", "Planet");
   material.setTexture("surfaceSampler", textures.surface);
   material.setTexture("nightSampler", textures.night ?? textures.surface);
+  // Precomputed build-time maps override these safe fallbacks asynchronously.
+  material.setTexture("heightSampler", textures.surface);
+  material.setTexture("roughnessSampler", textures.surface);
   material.setFloat("nightIntensity", textures.night ? 1 : 0);
   material.setFloat("oceanIntensity", body.appearance?.archetype === "ocean" ? 1 : 0);
   material.setFloat("stellar", body.appearance?.archetype === "stellar" ? 1 : 0);
   material.setFloat("contrastGain", 1.08);
+  material.setFloat("detailStrength", 0);
+  material.setFloat("detailScale", 1);
+  material.setFloat("detailPixelRadians", 0);
+  material.setFloat("detailProxyRadius", 1);
+  material.setVector3("detailSeed", Vector3.Zero());
   return material;
 }
 
@@ -314,6 +332,11 @@ export function cloudMaterial(scene: Scene, body: CelestialBody, textures: Plane
   if (!textures.clouds) throw new Error("Missing cloud texture for " + body.id);
   material.setTexture("cloudSampler", textures.clouds);
   material.setFloat("cloudOpacity", 0.42);
+  material.setFloat("detailStrength", 0);
+  material.setFloat("detailScale", 1);
+  material.setFloat("detailPixelRadians", 0);
+  material.setFloat("detailProxyRadius", 1);
+  material.setVector3("detailSeed", Vector3.Zero());
   material.backFaceCulling = true;
   return material;
 }
