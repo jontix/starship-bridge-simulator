@@ -3,13 +3,14 @@ import {
   ArcRotateCamera, Color3, Engine, FreeCamera, HemisphericLight, MeshBuilder,
   PointerEventTypes, Quaternion, Scene, StandardMaterial, Vector3
 } from "@babylonjs/core";
-import { rotateVector, vec3, type GameSnapshot, type Quat } from "@bridge-sim/shared";
+import { computeFloatingOrigin, getStarSystem, rotateVector, vec3, type GameSnapshot, type Quat } from "@bridge-sim/shared";
 import {
   attachEngineEffects, createNavigationVisuals,
   type PickedHeading, type SelectedHeading
 } from "./navigationVisuals";
+import { createDistantBodyMarkers, createReferenceStation } from "./celestialScene";
 
-export type CameraMode = "orbit" | "chase" | "tactical";
+export type CameraMode = "orbit" | "chase" | "tactical" | "sector";
 type Sample = { snapshot: GameSnapshot; receivedAt: number };
 const INTERPOLATION_DELAY_MS = 115;
 
@@ -78,12 +79,15 @@ export function MainScene({
     scene.clearColor.set(0.008, 0.011, 0.024, 1);
     const orbit = new ArcRotateCamera("orbit", -Math.PI / 4, Math.PI / 2.75, 78, Vector3.Zero(), scene);
     const tactical = new ArcRotateCamera("tactical", -Math.PI / 4, 0.47, 245, Vector3.Zero(), scene);
+    const sector = new ArcRotateCamera("sector", -Math.PI / 4, Math.PI / 2.8, 560, Vector3.Zero(), scene);
     const chase = new FreeCamera("chase", new Vector3(0, 20, -85), scene);
     orbit.lowerRadiusLimit = 62;
     orbit.upperRadiusLimit = 650;
     tactical.lowerRadiusLimit = 80;
     tactical.upperRadiusLimit = 900;
-    for (const camera of [orbit, tactical, chase]) camera.maxZ = 12000;
+    sector.lowerRadiusLimit = 140;
+    sector.upperRadiusLimit = 1500;
+    for (const camera of [orbit, tactical, sector, chase]) camera.maxZ = 12000;
 
     let selectedCamera: CameraMode | null = null;
     let spherePreviouslyVisible = false;
@@ -92,7 +96,8 @@ export function MainScene({
       if (selectedCamera !== wanted) {
         scene.activeCamera?.detachControl();
         selectedCamera = wanted;
-        scene.activeCamera = wanted === "chase" ? chase : wanted === "tactical" ? tactical : orbit;
+        scene.activeCamera = wanted === "chase" ? chase :
+        wanted === "tactical" ? tactical : wanted === "sector" ? sector : orbit;
         if (wanted !== "chase") scene.activeCamera.attachControl(canvas, true);
       }
       if (propsRef.current.showHeadingSphere !== spherePreviouslyVisible) {
@@ -134,6 +139,11 @@ export function MainScene({
     engineCore.isPickable = false;
     const plumes = attachEngineEffects(scene, ship);
     const nav = createNavigationVisuals(scene);
+    const orbitalStation = createReferenceStation(scene);
+    const celestialSky = createDistantBodyMarkers(scene);
+    // The physics remains in stable double-valued local metres, but Babylon gets
+    // rebased coordinates within about 1km of the camera to preserve GPU precision.
+    const renderOrigin = Vector3.Zero();
 
     const pickObserver = scene.onPointerObservable.add((pointerInfo) => {
       if (pointerInfo.type !== PointerEventTypes.POINTERPICK || !propsRef.current.showHeadingSphere) return;
@@ -146,27 +156,43 @@ export function MainScene({
       const pose = interpolatedPose(samplesRef.current, performance.now() - INTERPOLATION_DELAY_MS);
       const latest = latestRef.current;
       if (pose && latest) {
-        ship.position.copyFrom(pose.position);
+        const nearOrigin = computeFloatingOrigin({
+          x: pose.position.x, y: pose.position.y, z: pose.position.z
+        });
+        const nextOrigin = toVector(nearOrigin);
+        if (!nextOrigin.equalsWithEpsilon(renderOrigin, 0.00001)) {
+          const shift = renderOrigin.subtract(nextOrigin);
+          orbit.target.addInPlace(shift);
+          tactical.target.addInPlace(shift);
+          sector.target.addInPlace(shift);
+          chase.position.addInPlace(shift);
+          renderOrigin.copyFrom(nextOrigin);
+        }
+        const renderPosition = pose.position.subtract(renderOrigin);
+        ship.position.copyFrom(renderPosition);
         ship.rotationQuaternion?.copyFrom(pose.orientation);
         const frameDt = Math.min(engine.getDeltaTime() / 1000, 0.05);
         const follow = 1 - Math.exp(-10 * frameDt);
-        orbit.target = Vector3.Lerp(orbit.target, pose.position, follow);
-        tactical.target = Vector3.Lerp(tactical.target, pose.position, follow);
+        orbit.target = Vector3.Lerp(orbit.target, renderPosition, follow);
+        tactical.target = Vector3.Lerp(tactical.target, renderPosition, follow);
+        sector.target = Vector3.Lerp(sector.target, renderPosition, follow);
         const q = {
           x: pose.orientation.x, y: pose.orientation.y,
           z: pose.orientation.z, w: pose.orientation.w
         };
         const offset = toVector(rotateVector(q, vec3(0, 20, -80)));
-        chase.position = Vector3.Lerp(chase.position, pose.position.add(offset), follow);
+        chase.position = Vector3.Lerp(chase.position, renderPosition.add(offset), follow);
         chase.upVector.copyFrom(toVector(rotateVector(q, vec3(0, 1, 0))));
         const lookAhead = toVector(rotateVector(q, vec3(0, 0, 60)));
-        chase.setTarget(pose.position.add(lookAhead));
-        nav.update(pose, latest.ship, latest.tick, {
+        chase.setTarget(renderPosition.add(lookAhead));
+        nav.update(pose, latest.ship, latest.tick, renderOrigin, {
           sphere: propsRef.current.showHeadingSphere,
           aids: propsRef.current.showNavigationAids,
           selected: propsRef.current.selectedHeading
         });
         plumes.update(latest.ship.acceleration, performance.now() / 1000);
+        orbitalStation.update(getStarSystem(latest.universe.systemId), renderOrigin, true);
+        celestialSky.update(latest, renderPosition, propsRef.current.showNavigationAids);
       }
       scene.render();
     });

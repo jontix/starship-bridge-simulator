@@ -85,6 +85,27 @@ The flight physics constants are **unchanged**.
 
 Full walkthrough: [Navigation Visuals manual test plan](docs/navigation-visuals.md).
 
+## Milestone 2A: Aster Reach star system
+
+On `feature/first-star-system`, our multiplayer prototype now inhabits a fictional
+astronomically scaled star system. **Aster Reach** has one star, four planets, the moon
+Selene, and three stations whose positions come from hierarchical Keplerian orbits.
+
+Press **M** (or **System Map** in the header) from Helm or Main Screen:
+
+- Click celestial objects in the orbit chart or hierarchy to inspect them.
+- Preview orbital motion from -365 to +730 days without changing live server time.
+- See a logarithmic AU-scale orbital map, real radii/periods, and live ship distances.
+- Switch Main Screen / Helm camera to **Local sector / station** to see Haven Highport.
+- The local 3D renderer now uses a floating origin to preserve metres at large ranges.
+
+The existing ship controls still operate in the local station-relative frame.
+Interplanetary cruise, star-to-star jumps, orbital gravity and physical collisions are
+**future milestones**, not features of this prototype.
+
+See [First Star System architecture and test plan](docs/first-star-system.md).
+New systems are registered in `packages/shared/src/universe/registry.ts`.
+
 ## Monorepo
 
 - `packages/shared` — flight math, simulation, commands and tests

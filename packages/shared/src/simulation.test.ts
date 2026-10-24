@@ -6,6 +6,11 @@ import {
 import { applyHelmCommand, createInitialShipState, SHIP_LIMITS, stepShip } from "./simulation.js";
 import { HelmCommandSchema } from "./types.js";
 import { directionToHeading, headingToDirection, sub } from "./math.js";
+import { ASTER_REACH } from "./universe/aster-reach.js";
+import { bodyPositionAt, localShipToSystemPosition, solveEccentricAnomaly, systemPositionsAt, cameraRelativeMetres } from "./universe/orbits.js";
+import { getBody, getStarSystem, listStarSystems, validateStarSystem } from "./universe/registry.js";
+import { METRES_PER_AU, SECONDS_PER_DAY } from "./universe/units.js";
+import { computeFloatingOrigin, localToRenderPosition } from "./universe/floating-origin.js";
 
 const tick = 1 / 30;
 const advance = (ship: ReturnType<typeof createInitialShipState>, seconds: number) => {
@@ -126,4 +131,90 @@ test("heading sphere ignores invalid zero direction", () => {
   const direction = directionToHeading(vec3(10, 20, 10));
   assert.ok(direction);
   assert.ok(direction.pitch > 0);
+});
+
+test("first system is a valid, reusable parent-child orbital catalog", () => {
+  validateStarSystem(ASTER_REACH);
+  assert.equal(getStarSystem("aster-reach"), ASTER_REACH);
+  assert.ok(listStarSystems().length >= 1);
+  assert.equal(getBody(ASTER_REACH, "selene").parentId, "haven");
+  assert.equal(getBody(ASTER_REACH, "selene-observatory").parentId, "selene");
+  assert.equal(getBody(ASTER_REACH, "haven-highport").kind, "station");
+  assert.throws(() => getStarSystem("unregistered-system"), /Unknown star system/);
+});
+
+test("Keplerian orbit has correct periapsis, apoapsis and periodicity", () => {
+  const orbit = {
+    semiMajorAxisMeters: 1_000_000,
+    eccentricity: 0.2,
+    inclinationRadians: 0,
+    ascendingNodeRadians: 0,
+    periapsisArgumentRadians: 0,
+    meanAnomalyAtEpochRadians: 0,
+    periodSeconds: SECONDS_PER_DAY
+  };
+  const system = {
+    ...ASTER_REACH,
+    bodies: [
+      { id: "test-star", name: "Test star", kind: "star" as const, parentId: null, radiusMeters: 1000, mapColor: "#fff", description: "test", orbit: null },
+      { id: "test-planet", name: "Test planet", kind: "planet" as const, parentId: "test-star", radiusMeters: 100, mapColor: "#fff", description: "test", orbit }
+    ],
+    start: { referenceBodyId: "test-star", offsetFromReferenceMeters: vec3() }
+  };
+  const start = bodyPositionAt(system, "test-planet", system.epochUnixSeconds);
+  near(length(start), 800_000, 0.0001);
+  const half = bodyPositionAt(system, "test-planet", system.epochUnixSeconds + orbit.periodSeconds / 2);
+  near(length(half), 1_200_000, 0.0001);
+  const repeat = bodyPositionAt(system, "test-planet", system.epochUnixSeconds + orbit.periodSeconds);
+  near(length(sub(start, repeat)), 0, 0.00001);
+  near(solveEccentricAnomaly(0, orbit.eccentricity), 0, 0.000001);
+});
+
+test("planet and moons move independently; station remains close to its parent", () => {
+  const time = ASTER_REACH.epochUnixSeconds;
+  const positions = systemPositionsAt(ASTER_REACH, time);
+  near(length(positions.aster), 0);
+  const havenDistance = length(positions.haven);
+  assert.ok(havenDistance > 0.9 * METRES_PER_AU && havenDistance < 1.1 * METRES_PER_AU);
+  near(length(sub(positions.selene, positions.haven)), 384_400_000, 0.055 * 384_400_000 + 100);
+  near(length(sub(positions["haven-highport"], positions.haven)), 6_800_000, 0.01);
+  const later = systemPositionsAt(ASTER_REACH, time + SECONDS_PER_DAY * 15);
+  assert.ok(length(sub(later.haven, positions.haven)) > 1_000_000_000);
+  assert.ok(length(sub(later.selene, positions.selene)) > 1_000_000_000);
+  assert.ok(Math.abs(later.cinder.y - positions.cinder.y) > 1_000_000);
+});
+
+test("start frame positions stay astronomically precise while preserving local metre offsets", () => {
+  const time = ASTER_REACH.epochUnixSeconds;
+  const ref = bodyPositionAt(ASTER_REACH, ASTER_REACH.start.referenceBodyId, time);
+  const shipAtZero = localShipToSystemPosition(ASTER_REACH, vec3(), time);
+  near(length(sub(shipAtZero, ref)), 300, 0.0001);
+  const local = vec3(1400, 200, -850);
+  const global = localShipToSystemPosition(ASTER_REACH, local, time);
+  const recovered = cameraRelativeMetres(global, shipAtZero);
+  near(length(sub(recovered, local)), 0, 0.0001);
+  const snapshot = systemPositionsAt(ASTER_REACH, time);
+  assert.ok(Object.values(snapshot).every(pos => Number.isFinite(pos.x) && Number.isFinite(pos.y) && Number.isFinite(pos.z)));
+});
+
+test("floating origin preserves metre detail after a long local manoeuvre", () => {
+  const shipPosition = vec3(7_654_321.235, -20_000.125, 98_765_431.875);
+  const origin = computeFloatingOrigin(shipPosition);
+  const render = localToRenderPosition(shipPosition, origin);
+  assert.ok(Math.abs(render.x) <= 1024 && Math.abs(render.y) <= 1024 && Math.abs(render.z) <= 1024);
+  near(length(sub(vec3(render.x + origin.x, render.y + origin.y, render.z + origin.z), shipPosition)), 0, 0.000001);
+  const second = computeFloatingOrigin(vec3(shipPosition.x + 5000, shipPosition.y, shipPosition.z));
+  const moved = localToRenderPosition(shipPosition, second);
+  near(length(sub(vec3(moved.x + second.x, moved.y + second.y, moved.z + second.z), shipPosition)), 0, 0.000001);
+});
+
+test("all orbital elements are finite across centuries and hierarchical stations follow", () => {
+  for (const yearsFromEpoch of [-300, -10, 0, 10, 300]) {
+    const epoch = ASTER_REACH.epochUnixSeconds + yearsFromEpoch * 365.256 * SECONDS_PER_DAY;
+    const positions = systemPositionsAt(ASTER_REACH, epoch);
+    assert.equal(Object.keys(positions).length, ASTER_REACH.bodies.length);
+    assert.ok(Object.values(positions).every(p => [p.x,p.y,p.z].every(Number.isFinite)));
+    near(length(sub(positions["selene-observatory"], positions.selene)), 1_950_000, 0.01);
+    near(length(sub(positions["bastion-platform"], positions.bastion)), 105_000_000, 1_050_000);
+  }
 });
