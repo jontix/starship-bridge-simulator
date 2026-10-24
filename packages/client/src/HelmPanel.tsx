@@ -61,7 +61,9 @@ export function HelmPanel({
       </div>
       <CameraSelector mode={mode} setMode={setMode} />
       <PlanetViewControls snapshot={snapshot} focusId={planetFocusId}
-        setFocusId={setPlanetFocusId} opticalZoom={opticalZoom} setOpticalZoom={setOpticalZoom}/>
+        setFocusId={id => { setPlanetFocusId(id); setMode("planet"); }}
+        opticalZoom={opticalZoom}
+        setOpticalZoom={zoom => { setOpticalZoom(zoom); setMode("planet"); }}/>
       <p className="subtle instruction">
         Click the world-aligned sphere to choose a heading. Set attitude sends it to the ship.
         Roll remains independently controlled.
