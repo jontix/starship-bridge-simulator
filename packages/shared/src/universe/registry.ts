@@ -62,6 +62,11 @@ export function validateStarSystem(system: StarSystem): void {
         !(visual.clouds.coverage >= 0 && visual.clouds.coverage <= 1))) {
         throw new Error("Invalid clouds for " + body.id);
       }
+      if (visual.rings && (!(visual.rings.innerRadiusRatio > 1) ||
+        !(visual.rings.outerRadiusRatio > visual.rings.innerRadiusRatio) ||
+        !/^#[0-9a-fA-F]{6}$/.test(visual.rings.colorHex))) {
+        throw new Error("Invalid ring geometry for " + body.id);
+      }
     }
     const visited = new Set<string>();
     let cursor: CelestialBody | undefined = body;
