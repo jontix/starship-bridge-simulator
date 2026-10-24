@@ -1,0 +1,13 @@
+import cors from "cors";
+import express from "express";
+import { createServer } from "http";
+import { Server } from "colyseus";
+import { BridgeRoom } from "./BridgeRoom";
+const port = Number(process.env.PORT ?? 2567);
+const app = express();
+app.use(cors());
+app.get("/health", (_req, res) => res.json({ ok: true }));
+const gameServer = new Server({ server: createServer(app) });
+gameServer.define("bridge", BridgeRoom);
+gameServer.listen(port);
+console.log(`Bridge sim server listening on ws://localhost:${port}`);
