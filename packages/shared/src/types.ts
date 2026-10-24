@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Quat, Vec3 } from "./math.js";
+import type { CruiseState } from "./universe/cruise.js";
 
 export const RoleSchema = z.enum(["helm", "main-screen"]);
 export type PlayerRole = z.infer<typeof RoleSchema>;
@@ -42,7 +43,9 @@ export type GameSnapshot = {
     systemId: string;
     epochSeconds: number;
     referenceBodyId: string;
+    frameOffsetMeters: Vec3;
   };
+  cruise: CruiseState;
   tick: number;
   serverTime: number;
   ship: ShipState;

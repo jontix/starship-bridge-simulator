@@ -6,6 +6,7 @@ import { MainScene, type CameraMode } from "./scene";
 import { HelmPanel } from "./HelmPanel";
 import { MainScreenPanel } from "./MainScreenPanel";
 import { SystemMap } from "./SystemMap";
+import { CruiseStatusBanner } from "./CruisePanel";
 import type { PickedHeading, SelectedHeading } from "./navigationVisuals";
 import "./styles.css";
 
@@ -17,6 +18,7 @@ function App() {
   const [room, setRoom] = useState<Room | null>(null);
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [status, setStatus] = useState("Connecting...");
+  const [cruiseNotice, setCruiseNotice] = useState("");
   const [showHeadingSphere, setShowHeadingSphere] = useState(false);
   const [showSystemMap, setShowSystemMap] = useState(false);
   const [showNavigationAids, setShowNavigationAids] = useState(true);
@@ -67,6 +69,7 @@ function App() {
 
     setRoom(null);
     setSnapshot(null);
+    setCruiseNotice("");
     const client = new Client(serverUrl);
 
     const retry = () => {
@@ -87,6 +90,9 @@ function App() {
         attempts = 0;
         setRoom(newRoom);
         setStatus(`Connected · ${role === "helm" ? "Helm" : "Main Screen"}`);
+        newRoom.onMessage("cruise_notice", (message: string) => {
+          if (alive) setCruiseNotice(message);
+        });
         newRoom.onMessage("snapshot", (message: GameSnapshot) => {
           if (alive) setSnapshot(message);
         });
@@ -139,7 +145,7 @@ function App() {
         <MainScene
           snapshot={snapshot}
           mode={cameraMode}
-          showHeadingSphere={role === "helm" && showHeadingSphere}
+          showHeadingSphere={role === "helm" && showHeadingSphere && snapshot?.cruise.mode === "local"}
           showNavigationAids={showNavigationAids}
           selectedHeading={selectedHeading}
           onHeadingPicked={pickHeading}
@@ -148,6 +154,7 @@ function App() {
           <HelmPanel
             room={room}
             snapshot={snapshot}
+            cruiseNotice={cruiseNotice}
             heading={selectedHeading}
             setHeading={setSelectedHeading}
             showSphere={showHeadingSphere}
@@ -166,10 +173,12 @@ function App() {
             toggleAids={() => setShowNavigationAids(value => !value)}
           />
         )}
+        <CruiseStatusBanner snapshot={snapshot}/>
         <div className="scene-caption">
-          {liveSystem.name.toUpperCase()} · LOCAL FRAME: {liveSystem.start.referenceBodyId.toUpperCase()} · 6DOF / 30 HZ
+          {liveSystem.name.toUpperCase()} · {snapshot?.cruise.mode === "local" ? "LOCAL" : "INTERPLANETARY"} ·
+          FRAME: {(snapshot?.universe.referenceBodyId ?? liveSystem.start.referenceBodyId).toUpperCase()} · 30 HZ
         </div>
-        {role === "helm" && showHeadingSphere && !showSystemMap && (
+        {role === "helm" && showHeadingSphere && snapshot?.cruise.mode === "local" && !showSystemMap && (
           <div className="nav-legend" aria-label="Heading sphere legend">
             <strong>WORLD HEADING SPHERE</strong>
             <span><i className="swatch preview" /> Cyan · selected (not sent)</span>
@@ -179,7 +188,14 @@ function App() {
             <small>Drag to orbit · click sphere to select · Set attitude to engage</small>
           </div>
         )}
-        {showSystemMap && <SystemMap snapshot={snapshot} onClose={() => setShowSystemMap(false)} />}
+        {showSystemMap && <SystemMap
+          snapshot={snapshot}
+          onClose={() => setShowSystemMap(false)}
+          onPlotCourse={role === "helm" && room ? targetId => {
+            room.send("cruise_command", { type: "set_cruise_target", targetId });
+            setShowSystemMap(false);
+          } : undefined}
+        />}
       </main>
     </div>
   );

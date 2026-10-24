@@ -2,12 +2,14 @@ import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import type { Room } from "colyseus.js";
 import { attitudeFromQuat, length, type GameSnapshot } from "@bridge-sim/shared";
 import type { CameraMode } from "./scene";
+import { CruisePanel } from "./CruisePanel";
 import type { SelectedHeading } from "./navigationVisuals";
 import { BeaconList, CameraSelector, Control, degrees, driftAngle, number, Telemetry, toRadians } from "./navigationUI";
 
 type HelmPanelProps = {
   room: Room | null;
   snapshot: GameSnapshot | null;
+  cruiseNotice: string;
   heading: SelectedHeading;
   setHeading: Dispatch<SetStateAction<SelectedHeading>>;
   showSphere: boolean;
@@ -19,13 +21,14 @@ type HelmPanelProps = {
 };
 
 export function HelmPanel({
-  room, snapshot, heading, setHeading,
+  room, snapshot, cruiseNotice, heading, setHeading,
   showSphere, toggleSphere, showAids, toggleAids, mode, setMode
 }: HelmPanelProps) {
   const [speed, setSpeed] = useState(0);
   const [strafe, setStrafe] = useState(0);
   const [lift, setLift] = useState(0);
   const ship = snapshot?.ship;
+  const impulseEnabled = Boolean(room && snapshot?.cruise.mode === "local");
   const actual = useMemo(() => ship ? attitudeFromQuat(ship.orientation) : null, [ship]);
   const send = (command: unknown) => room?.send("helm_command", command);
   const committed = ship
@@ -37,8 +40,10 @@ export function HelmPanel({
     <section className="panel helm-panel">
       <div className="panel-heading">
         <h2>Helm</h2>
-        <span className="state-pill">{ship?.emergencyStopping ? "EMERGENCY BRAKE" : "FLIGHT ASSIST"}</span>
+        <span className="state-pill">{snapshot?.cruise.mode !== "local" ? "CRUISE DRIVE" : ship?.emergencyStopping ? "EMERGENCY BRAKE" : "FLIGHT ASSIST"}</span>
       </div>
+      <CruisePanel room={room} snapshot={snapshot} notice={cruiseNotice}/>
+      {snapshot?.cruise.mode !== "local" && <p className="cruise-impulse-lock">Impulse commands are suspended while the cruise drive is engaged.</p>}
       <h3>Navigation display</h3>
       <div className="toolbar-buttons">
         <button className={showSphere ? "active" : ""} aria-pressed={showSphere} onClick={toggleSphere}>
@@ -63,7 +68,7 @@ export function HelmPanel({
       <Control label="Yaw / bearing" value={heading.yaw} set={yaw => setHeading(previous => ({ ...previous, yaw }))} min={-180} max={180} unit="°" />
       <Control label="Pitch / elevation" value={heading.pitch} set={pitch => setHeading(previous => ({ ...previous, pitch }))} min={-90} max={90} unit="°" />
       <Control label="Roll" value={heading.roll} set={roll => setHeading(previous => ({ ...previous, roll }))} min={-180} max={180} unit="°" />
-      <button className="engage" disabled={!room} onClick={() => send({
+      <button className="engage" disabled={!impulseEnabled} onClick={() => send({
         type: "set_heading",
         yaw: toRadians(heading.yaw), pitch: toRadians(heading.pitch), roll: toRadians(heading.roll)
       })}>Set attitude · engage heading</button>
@@ -90,7 +95,7 @@ export function HelmPanel({
       </div>
       <h3>Velocity and drift</h3>
       <div className="telemetry-grid">
-        <Telemetry label="World speed" value={ship ? number(length(ship.velocity)) + " m/s" : "—"} />
+        <Telemetry label="World speed" value={ship && snapshot?.cruise.mode === "local" ? number(length(ship.velocity)) + " m/s" : "Suspended"} />
         <Telemetry label="Off-axis drift" value={ship ? driftAngle(ship) : "—"} />
         <Telemetry label="Acceleration" value={ship ? number(length(ship.acceleration)) + " m/s²" : "—"} />
         <Telemetry label="Angular rate" value={ship ? degrees(length(ship.angularVelocity)) + " °/s" : "—"} />

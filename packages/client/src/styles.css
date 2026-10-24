@@ -172,3 +172,33 @@ kbd { display: inline-block; background: #0b1727; color: #c2d5e9; border: 1px so
   .map-time-controls { padding: 10px; }
   .system-map-top { padding: 10px; }
 }
+
+/* Milestone 2B: bridge-commanded interplanetary cruise */
+.cruise-panel { border-bottom: 1px solid #2a4758; padding-bottom: 18px; margin-bottom: 12px; }
+.cruise-panel > h3:first-child { margin-top: 8px; color: #85e2d5; }
+.cruise-readout { display: flex; flex-direction: column; gap: 6px; padding: 11px; background: #102c39; border: 1px solid #2a6073; border-radius: 9px; font-variant-numeric: tabular-nums; }
+.cruise-line { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; font-size: 12px; }
+.cruise-line span { color: #9dbbca; }
+.cruise-line strong { text-align: right; color: #d7fbff; }
+.cruise-field { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-top: 12px; gap: 6px; font-size: 12px; color: #b1d1dd; }
+.cruise-field select, .cruise-field input { flex: 1 0 100%; width: 100%; }
+.cruise-field input { accent-color: #58e1c8; }
+.cruise-engage { margin-top: 12px; font-size: 13px; }
+.cruise-charge { color: #ffdd9d; font-size: 11px; }
+.cruise-progress-track { height: 6px; border-radius: 5px; background: #2a4256; overflow: hidden; margin-top: 4px; }
+.cruise-progress-track > div { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #428faf, #69ffda); transition: width 0.2s linear; }
+.cruise-last-event { color: #a1c6d5; font-size: 11px; margin: 5px 0 0; line-height: 1.45; }
+.cruise-notice { background: #152c42; border: 1px solid #3b6881; border-radius: 6px; color: #c4efff; padding: 10px; font-size: 11px; }
+.cruise-impulse-lock { color: #f1c687; border-left: 3px solid #d5a65b; padding: 8px 12px; font-size: 11px; background: #33271844; }
+.cruise-banner { position: absolute; z-index: 15; left: 50%; transform: translateX(-50%); top: 16px; width: min(390px, 42%); padding: 13px 16px; border-radius: 12px; background: rgba(8,31,48,.88); border: 1px solid rgba(85,198,226,.72); box-shadow: 0 7px 35px rgba(1,9,22,.5); backdrop-filter: blur(7px); pointer-events: none; }
+.cruise-banner-title { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; font-size: 12px; color: #83f9db; letter-spacing: .06em; }
+.cruise-banner-title strong { color: #ecfcff; letter-spacing: 0; }
+.cruise-banner-metrics { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: #bbf4f7; font-variant-numeric: tabular-nums; padding: 10px 0 3px; }
+.cruise-banner small { display: block; color: #9ac8d6; padding-top: 7px; font-size: 10px; }
+@media (max-width: 900px) {
+  .cruise-banner { top: auto; bottom: 12px; width: min(420px, 62%); padding: 9px 12px; }
+}
+@media (max-width: 560px) {
+  .cruise-banner { width: calc(100% - 18px); left: 9px; transform: none; bottom: 5px; }
+  .cruise-banner small { display: none; }
+}
