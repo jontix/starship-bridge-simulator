@@ -20,27 +20,55 @@ function App() {
   useEffect(() => {
     let alive = true;
     let joined: Room | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+    let attempts = 0;
+
     setRoom(null);
     setSnapshot(null);
-    setStatus("Connecting...");
     const client = new Client(serverUrl);
-    client.joinOrCreate("bridge", { role }).then((newRoom) => {
-      if (!alive) { void newRoom.leave(); return; }
-      joined = newRoom;
-      setRoom(newRoom);
-      setStatus(`Connected · ${role === "helm" ? "Helm" : "Main Screen"}`);
-      newRoom.onMessage("snapshot", (message: GameSnapshot) => {
-        if (alive) setSnapshot(message);
-      });
-      newRoom.onLeave(() => {
-        if (alive) { setRoom(null); setStatus("Disconnected"); }
-      });
-    }).catch((error) => {
-      console.error("Could not join bridge room", error);
-      if (alive) setStatus("Could not connect to server");
-    });
+
+    const retry = () => {
+      if (!alive) return;
+      attempts++;
+      const delayMs = Math.min(5000, 1000 * 2 ** Math.min(attempts - 1, 3));
+      setStatus(`Server unavailable · retry in ${delayMs / 1000}s (${serverUrl})`);
+      reconnectTimer = setTimeout(() => { void connect(); }, delayMs);
+    };
+
+    const connect = async () => {
+      if (!alive) return;
+      setStatus(`Connecting to ${serverUrl}...`);
+      try {
+        const newRoom = await client.joinOrCreate("bridge", { role });
+        if (!alive) { void newRoom.leave(); return; }
+        joined = newRoom;
+        attempts = 0;
+        setRoom(newRoom);
+        setStatus(`Connected · ${role === "helm" ? "Helm" : "Main Screen"}`);
+        newRoom.onMessage("snapshot", (message: GameSnapshot) => {
+          if (alive) setSnapshot(message);
+        });
+        newRoom.onLeave(() => {
+          if (!alive) return;
+          joined = null;
+          setRoom(null);
+          setSnapshot(null);
+          retry();
+        });
+        newRoom.onError((code, message) => {
+          if (alive) console.error("Bridge room error", code, message);
+        });
+      } catch (error) {
+        if (!alive) return;
+        console.warn("Could not join bridge room", serverUrl, error);
+        retry();
+      }
+    };
+
+    void connect();
     return () => {
       alive = false;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       if (joined) void joined.leave();
     };
   }, [role]);
