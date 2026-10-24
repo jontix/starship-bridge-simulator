@@ -15,13 +15,15 @@ const flagSpec={
   "--ocean":"oceanCoverage","--continental":"continentalScale",
   "--mountains":"mountainStrength","--moisture":"moisture",
   "--clouds":"cloudCoverage","--polar":"polarCooling","--tilt":"axialTiltDegrees",
-  "--config":"config","--asset-root":"assetRoot","--preview-root":"previewRoot"
+  "--config":"config","--asset-root":"assetRoot","--preview-root":"previewRoot",
+  "--if-missing":"ifMissing"
 };
 
 export function parseArgs(argv){
   const result={preset:"haven"};
   for(let i=0;i<argv.length;i++){
     if(argv[i]==="--help")return{help:true};
+    if(argv[i]==="--if-missing"){result.ifMissing=true;continue;}
     const key=flagSpec[argv[i]];
     if(!key)throw new Error("Unknown option: "+argv[i]);
     const raw=argv[++i];if(raw===undefined)throw new Error("Missing value for "+argv[i-1]);
@@ -63,6 +65,8 @@ export function encodePng({width,height,data}){
 
 export async function buildAssets(userOptions={}){
   const cli={...userOptions}, presetId=cli.preset??"haven";
+  const ifMissing=Boolean(cli.ifMissing);
+  delete cli.ifMissing;
   delete cli.preset;
   if(!(presetId in PRESETS))throw new Error("Unknown preset "+presetId+". Available: "+Object.keys(PRESETS).join(", "));
   const base={...PRESETS[presetId]};
@@ -73,6 +77,17 @@ export async function buildAssets(userOptions={}){
   const assetRoot=resolve(projectRoot,cli.assetRoot??"packages/client/src/assets/generated-planets");
   const previewRoot=resolve(projectRoot,cli.previewRoot??"packages/client/public/planet-lab");
   delete cli.assetRoot;delete cli.previewRoot;
+  const id=cli.id??base.id;
+  if(ifMissing){
+    try{
+      const cached=JSON.parse(await readFile(join(assetRoot,id,"manifest.json"),"utf8"));
+      if(cached.generator===GENERATOR_VERSION &&
+        cached.options?.id===id && cached.options?.width >= 128){
+        console.log("Using cached planetary maps for "+id+" (seed "+cached.options.seed+").");
+        return {manifest:cached,assetsDir:join(assetRoot,id),previewsDir:join(previewRoot,id)};
+      }
+    }catch{/* No cached assets: generate now. */}
+  }
   const data=generatePlanet({...base,...cli});
   const assetsDir=join(assetRoot,data.options.id);
   const previewsDir=join(previewRoot,data.options.id);
