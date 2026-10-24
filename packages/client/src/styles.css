@@ -292,3 +292,40 @@ kbd { display: inline-block; background: #0b1727; color: #c2d5e9; border: 1px so
   font-weight: 600;
 }
 .planet-reset-zoom:hover { background: #31708c; }
+
+/* In-viewscreen optical telemetry, outside scrollable station panels. */
+.telescope-sightline-banner {
+  position: absolute;
+  left: 318px;
+  top: 18px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  max-width: min(430px, calc(100vw - 340px));
+  padding: 13px 15px;
+  background: rgba(8, 22, 34, .94);
+  border: 1px solid #5e98af;
+  border-radius: 10px;
+  color: #dbeefa;
+  box-shadow: 0 8px 35px rgba(0,0,0,.3);
+  font-size: 12px;
+  line-height: 1.42;
+}
+.telescope-sightline-banner strong { color: #f3fbff; font-size: 13px; }
+.telescope-sightline-banner > span { color: #abc9d8; }
+.telescope-sightline-banner > button {
+  align-self: flex-start;
+  width: auto;
+  font-size: 11px;
+  padding: 6px 12px;
+  margin-top: 4px;
+  background: #245c71;
+  border-color: #6faac7;
+}
+@media (max-width: 750px) {
+  .telescope-sightline-banner {
+    left: 12px; right: 12px; top: auto; bottom: 38px;
+    max-width: none;
+  }
+}
