@@ -305,7 +305,7 @@ export function cloudMaterial(scene: Scene, body: CelestialBody, textures: Plane
   if (!textures.clouds) throw new Error("Missing cloud texture for " + body.id);
   material.setTexture("cloudSampler", textures.clouds);
   material.setFloat("cloudOpacity", 0.42);
-  material.backFaceCulling = false;
+  material.backFaceCulling = true;
   return material;
 }
 
@@ -317,7 +317,7 @@ export function atmosphereMaterial(scene: Scene, body: CelestialBody): ShaderMat
   material.setFloat("planetRadius", 1);
   material.setFloat("atmosphereRadius", 1.03);
   material.setFloat("atmosphereDensity", 0.75);
-  material.backFaceCulling = false;
+  material.backFaceCulling = true; // Integrate atmospheric path only once, not through back faces again.
   material.disableDepthWrite = true;
   return material;
 }
