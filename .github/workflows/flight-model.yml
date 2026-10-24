@@ -4,6 +4,11 @@ on:
     branches: [main, feature/flight-model-v1, feature/navigation-visuals, feature/first-star-system, feature/interplanetary-cruise, feature/planetary-rendering, feature/planetary-rendering-v2]
   pull_request:
     branches: [main, feature/flight-model-v1, feature/navigation-visuals, feature/first-star-system, feature/interplanetary-cruise, feature/planetary-rendering]
+# Rapid visual iteration should not leave dozens of obsolete GPU builds queued.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-test:
     runs-on: ${{ matrix.os }}
