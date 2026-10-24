@@ -23,7 +23,9 @@ export function MainScreenPanel({
       <h2>Main Screen</h2>
       <CameraSelector mode={mode} setMode={setMode} />
       <PlanetViewControls snapshot={snapshot} focusId={planetFocusId}
-        setFocusId={setPlanetFocusId} opticalZoom={opticalZoom} setOpticalZoom={setOpticalZoom}/>
+        setFocusId={id => { setPlanetFocusId(id); setMode("planet"); }}
+        opticalZoom={opticalZoom}
+        setOpticalZoom={zoom => { setOpticalZoom(zoom); setMode("planet"); }}/>
       <CruiseReadout snapshot={snapshot}/>
       <button className={showAids ? "active" : ""} aria-pressed={showAids} onClick={toggleAids}>
         {showAids ? "Hide navigation overlays" : "Show navigation overlays"}
