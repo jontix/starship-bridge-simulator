@@ -8,9 +8,10 @@ import {
   getStarSystem, length, normalize, scale, shipPositionFromSnapshot, sub, systemPositionsAt,
   type CelestialBody, type GameSnapshot, type StarSystem, type Vec3
 } from "@bridge-sim/shared";
-import { atmosphereMaterial, cloudMaterial, placeholderMaterial, surfaceMaterial } from "./planetMaterials";
+import { atmosphereMaterial, cloudMaterial, placeholderMaterial, surfaceMaterial, starMaterial } from "./planetMaterials";
 import { generatePlanetTextures } from "./planetTextures";
 import { createPlanetRings } from "./planetRings";
+import { createStellarCorona, updateStellarCorona } from "./stellarEffects";
 
 const PROXY_DISTANCE = 8_000;
 const TAU = Math.PI * 2;
@@ -24,6 +25,7 @@ type Globe = {
   cloudRotation: TransformNode | null;
   atmosphere: Mesh | null;
   glint: Mesh;
+  corona: Mesh | null;
   loaded: boolean;
   sunMaterials: { setVector3: (name: string, value: Vector3) => unknown }[];
 };
@@ -94,6 +96,8 @@ function createGlobe(scene: Scene, body: CelestialBody): Globe {
 
   createPlanetRings(scene, body, root);
 
+  const corona = body.kind === "star" ? createStellarCorona(scene, body.id) : null;
+
   const glint = MeshBuilder.CreateSphere("unresolved-disc-glint-" + body.id, {
     diameter: 11, segments: 10
   }, scene);
@@ -107,7 +111,7 @@ function createGlobe(scene: Scene, body: CelestialBody): Globe {
   root.setEnabled(false);
   return {
     root, surface, globeRotation, cloudRotation, clouds, atmosphere,
-    glint, loaded: false, sunMaterials: []
+    glint, corona, loaded: false, sunMaterials: []
   };
 }
 
@@ -131,6 +135,7 @@ export function createPlanetaryBackground(engine: Engine) {
     for (const globe of globes.values()) {
       globe.root.dispose(false, true);
       globe.glint.dispose(false, true);
+      globe.corona?.dispose(false, true);
     }
     globes.clear();
     activeSystemId = system.id;
@@ -166,7 +171,12 @@ export function createPlanetaryBackground(engine: Engine) {
       if (!globe) continue;
       const distanceVector = sub(positions[body.id], cameraSystemPosition);
       const distance = length(distanceVector);
-      if (distance < 1) { globe.root.setEnabled(false); globe.glint.setEnabled(false); continue; }
+      if (distance < 1) {
+        globe.root.setEnabled(false);
+        globe.glint.setEnabled(false);
+        globe.corona?.setEnabled(false);
+        continue;
+      }
       const geometry = apparentBodyGeometry(body.radiusMeters, positions[body.id], cameraSystemPosition, PROXY_DISTANCE);
       const direction = normalize(distanceVector);
       const skyPosition = toVector(scale(direction, PROXY_DISTANCE));
@@ -174,7 +184,13 @@ export function createPlanetaryBackground(engine: Engine) {
       const resolved = pixelDiameter >= 1.8;
 
       globe.root.setEnabled(resolved);
-      globe.glint.setEnabled(!resolved && aidsVisible);
+      // Stars remain a luminous point source at interplanetary ranges,
+      // independent of debug/navigation aid visibility.
+      globe.glint.setEnabled(!resolved && (aidsVisible || body.kind === "star"));
+      if (globe.corona) {
+        updateStellarCorona(globe.corona, skyPosition, geometry.proxyRadiusMetres,
+          PROXY_DISTANCE, true);
+      }
       if (!resolved) {
         globe.glint.position.copyFrom(skyPosition);
         continue;
@@ -193,7 +209,9 @@ export function createPlanetaryBackground(engine: Engine) {
       if (!globe.loaded && pixelDiameter >= 3.5) {
         const textures = generatePlanetTextures(sky, body);
         const old = globe.surface.material;
-        const litSurface = surfaceMaterial(sky, body, textures);
+        const litSurface = body.appearance?.archetype === "stellar"
+          ? starMaterial(sky, body, textures)
+          : surfaceMaterial(sky, body, textures);
         globe.surface.material = litSurface;
         old?.dispose();
         globe.sunMaterials.push(litSurface);
@@ -213,6 +231,20 @@ export function createPlanetaryBackground(engine: Engine) {
       const lightVector = sub(sunPosition, positions[body.id]);
       const sunDirection = toVector(length(lightVector) > 1 ? normalize(lightVector) : { x: 1, y: 0, z: 0 });
       for (const material of globe.sunMaterials) material.setVector3("sunDirection", sunDirection);
+      if (body.appearance?.archetype === "stellar" && globe.surface.material instanceof ShaderMaterial) {
+        // Slow convection animation in day-sized simulation time units.
+        const seconds = snapshot.universe.epochSeconds - system.epochUnixSeconds;
+        globe.surface.material.setFloat("stellarTime", seconds / 7200);
+      }
+      if (globe.atmosphere?.material instanceof ShaderMaterial) {
+        const atmosphere = globe.atmosphere.material;
+        const atmosphericRadius = geometry.proxyRadiusMetres *
+          (1 + (body.appearance?.atmosphere?.thicknessMeters ?? 0) / body.radiusMeters);
+        atmosphere.setVector3("planetCenter", skyPosition);
+        atmosphere.setFloat("planetRadius", geometry.proxyRadiusMetres);
+        atmosphere.setFloat("atmosphereRadius", atmosphericRadius);
+        atmosphere.setFloat("atmosphereDensity", body.appearance?.archetype === "ocean" ? 0.9 : 0.5);
+      }
       if (globe.atmosphere && !globe.loaded) globe.atmosphere.setEnabled(false);
       if (globe.atmosphere && globe.loaded) globe.atmosphere.setEnabled(true);
     }
