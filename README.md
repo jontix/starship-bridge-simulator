@@ -130,6 +130,34 @@ cruise** and follow the moving system-map marker.
 
 See [Interplanetary Cruise notes and test plan](docs/interplanetary-cruise.md).
 
+## Planet Rendering — True astronomical scale
+
+Branch `feature/planetary-rendering` upgrades Aster Reach's symbolic 3D
+planet markers to **correct-angular-size spherical worlds**, using actual
+catalogued planet radii and Keplerian positions.
+
+**First visual test:** choose **Planet / orbital panorama** camera (the new
+default) beside Haven Highport. Haven's radius is 6,370 km, and the station
+orbits about 430 km above its surface; it should fill much of the visible sky
+behind the station, with a convincing curved horizon.
+
+- Dedicated planetary sky scene, rendering behind the local ship/station
+  geometry so huge projection spheres never clip local objects.
+- Physically accurate angular sizes over billions of kilometres, a separate
+  astronomical map with clearly labelled schematic/log-scale symbols.
+- Procedural, seam-free textures and custom sunlight shaders: oceans,
+  continents, airless craters, gas bands, rotating clouds, day/night
+  boundaries, atmospheric rims and night-side settlement lights.
+- Reusable appearance presets stored directly in the system catalog, ready
+  for future authored and procedural star systems.
+- Camera focus selector on **Helm and Main Screen**: choose a specific planet,
+  moon or star, or automatically follow the local world/cruise destination.
+- Physical radius, range, surface altitude and apparent angular diameter
+  telemetry to help us evaluate visual scale.
+
+No planet landing/terrain collision or full atmospheric flight physics yet.
+See [Planet Rendering design and acceptance tests](docs/planetary-rendering.md).
+
 ## Monorepo
 
 - `packages/shared` — flight math, simulation, commands and tests

@@ -3,6 +3,7 @@ import type { Room } from "colyseus.js";
 import { attitudeFromQuat, length, type GameSnapshot } from "@bridge-sim/shared";
 import type { CameraMode } from "./scene";
 import { CruisePanel } from "./CruisePanel";
+import { PlanetViewControls } from "./PlanetReadout";
 import type { SelectedHeading } from "./navigationVisuals";
 import { BeaconList, CameraSelector, Control, degrees, driftAngle, number, Telemetry, toRadians } from "./navigationUI";
 
@@ -18,11 +19,14 @@ type HelmPanelProps = {
   toggleAids: () => void;
   mode: CameraMode;
   setMode: (mode: CameraMode) => void;
+  planetFocusId: string;
+  setPlanetFocusId: (id: string) => void;
 };
 
 export function HelmPanel({
   room, snapshot, cruiseNotice, heading, setHeading,
-  showSphere, toggleSphere, showAids, toggleAids, mode, setMode
+  showSphere, toggleSphere, showAids, toggleAids, mode, setMode,
+  planetFocusId, setPlanetFocusId
 }: HelmPanelProps) {
   const [speed, setSpeed] = useState(0);
   const [strafe, setStrafe] = useState(0);
@@ -54,6 +58,7 @@ export function HelmPanel({
         </button>
       </div>
       <CameraSelector mode={mode} setMode={setMode} />
+      <PlanetViewControls snapshot={snapshot} focusId={planetFocusId} setFocusId={setPlanetFocusId}/>
       <p className="subtle instruction">
         Click the world-aligned sphere to choose a heading. Set attitude sends it to the ship.
         Roll remains independently controlled.

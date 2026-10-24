@@ -6,7 +6,12 @@ import {
   type CelestialBody, type GameSnapshot, type StarSystem, type Vec3
 } from "@bridge-sim/shared";
 
-type MapProps = { snapshot: GameSnapshot | null; onClose: () => void; onPlotCourse?: (targetId: string) => void };
+type MapProps = {
+  snapshot: GameSnapshot | null;
+  onClose: () => void;
+  onPlotCourse?: (targetId: string) => void;
+  onFocusBody?: (bodyId: string) => void;
+};
 
 const CENTRE = { x: 334, y: 310 };
 const ORBIT_RADIUS = 260;
@@ -30,7 +35,7 @@ function chooseMapParent(system: StarSystem, body: CelestialBody): CelestialBody
   return current;
 }
 
-export function SystemMap({ snapshot, onClose, onPlotCourse }: MapProps) {
+export function SystemMap({ snapshot, onClose, onPlotCourse, onFocusBody }: MapProps) {
   const [selectionId, setSelectionId] = useState("haven");
   const [previewDays, setPreviewDays] = useState(0);
   const systemId = snapshot?.universe.systemId ?? listStarSystems()[0].id;
@@ -207,6 +212,9 @@ export function SystemMap({ snapshot, onClose, onPlotCourse }: MapProps) {
                 {distance !== null && <><dt>From ship (live)</dt><dd>{formatAstronomicalDistance(distance)}</dd></>}
                 <dt>Orbit inclination</dt><dd>{selected.orbit ? (selected.orbit.inclinationRadians * 180 / Math.PI).toFixed(1) + "°" : "—"}</dd>
               </dl>
+              {onFocusBody && <button className="map-focus-world" onClick={() => onFocusBody(selected.id)}>
+                View {selected.name} in 3D orbital camera
+              </button>}
               {onPlotCourse && <button className="engage" disabled={!snapshot || snapshot.cruise.mode !== "local"}
                 onClick={() => onPlotCourse(selected.id)}>
                 Plot cruise course to {selected.name}

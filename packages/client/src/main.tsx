@@ -14,7 +14,8 @@ const serverUrl = import.meta.env.VITE_SERVER_URL ?? `ws://${window.location.hos
 
 function App() {
   const [role, setRole] = useState<PlayerRole>("main-screen");
-  const [cameraMode, setCameraMode] = useState<CameraMode>("orbit");
+  const [cameraMode, setCameraMode] = useState<CameraMode>("planet");
+  const [planetFocusId, setPlanetFocusId] = useState("auto");
   const [room, setRoom] = useState<Room | null>(null);
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [status, setStatus] = useState("Connecting...");
@@ -149,6 +150,7 @@ function App() {
           showNavigationAids={showNavigationAids}
           selectedHeading={selectedHeading}
           onHeadingPicked={pickHeading}
+          planetFocusId={planetFocusId}
         />
         {role === "helm" ? (
           <HelmPanel
@@ -163,6 +165,8 @@ function App() {
             toggleAids={() => setShowNavigationAids(value => !value)}
             mode={cameraMode}
             setMode={setCameraMode}
+            planetFocusId={planetFocusId}
+            setPlanetFocusId={setPlanetFocusId}
           />
         ) : (
           <MainScreenPanel
@@ -171,6 +175,8 @@ function App() {
             setMode={setCameraMode}
             showAids={showNavigationAids}
             toggleAids={() => setShowNavigationAids(value => !value)}
+            planetFocusId={planetFocusId}
+            setPlanetFocusId={setPlanetFocusId}
           />
         )}
         <CruiseStatusBanner snapshot={snapshot}/>
@@ -191,6 +197,11 @@ function App() {
         {showSystemMap && <SystemMap
           snapshot={snapshot}
           onClose={() => setShowSystemMap(false)}
+          onFocusBody={bodyId => {
+            setPlanetFocusId(bodyId);
+            setCameraMode("planet");
+            setShowSystemMap(false);
+          }}
           onPlotCourse={role === "helm" && room ? targetId => {
             room.send("cruise_command", { type: "set_cruise_target", targetId });
             setShowSystemMap(false);

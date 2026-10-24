@@ -13,6 +13,17 @@ export type OrbitalElements = {
   periodSeconds: number;
 };
 
+/** Renderer-agnostic appearance presets; physical radii remain unmodified. */
+export type PlanetAppearance = {
+  archetype: "ocean" | "rocky" | "airless" | "gas-giant" | "ice-giant" | "stellar";
+  seed: number;
+  axialTiltRadians: number;
+  rotationPeriodSeconds: number;
+  atmosphere?: { colorHex: string; thicknessMeters: number };
+  clouds?: { altitudeMeters: number; coverage: number };
+  rings?: { innerRadiusRatio: number; outerRadiusRatio: number; colorHex: string };
+};
+
 export type CelestialBody = {
   id: string;
   name: string;
@@ -22,6 +33,7 @@ export type CelestialBody = {
   mapColor: string;
   orbit: OrbitalElements | null;
   description: string;
+  appearance?: PlanetAppearance;
 };
 
 export type StarSystem = {

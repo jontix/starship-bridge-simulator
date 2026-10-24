@@ -27,6 +27,7 @@ export function CameraSelector({
       <option value="chase">Chase camera</option>
       <option value="tactical">Tactical overhead</option>
       <option value="sector">Local sector / station</option>
+      <option value="planet">Planet / orbital panorama</option>
     </select>
   </label>;
 }
