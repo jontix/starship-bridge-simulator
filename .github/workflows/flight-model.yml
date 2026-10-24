@@ -29,6 +29,7 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: node --import tsx --test packages/client/src/planetAppearance.test.ts
+      - run: node --import tsx --test packages/client/src/planetView.test.ts
       - run: node scripts/smoke-server.mjs
       - run: node scripts/smoke-universe.mjs
       - run: node scripts/smoke-cruise.mjs
