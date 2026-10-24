@@ -327,7 +327,8 @@ export function MainScene({
         planetarySky.update(
           visualSnapshot, activeCamera, { x: cameraOffset.x, y: cameraOffset.y, z: cameraOffset.z },
           propsRef.current.planetFocusId, engine.getRenderHeight(),
-          propsRef.current.showNavigationAids
+          propsRef.current.showNavigationAids,
+          propsRef.current.mode !== "tactical"
         );
         const cruiseSpeed = latest.cruise.speedMetersPerSecond;
         streaks.setEnabled(!local && cruiseSpeed > 5_000);
