@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { Client, type Room } from "colyseus.js";
 import { DEFAULT_SYSTEM_ID, getStarSystem, type GameSnapshot, type PlayerRole } from "@bridge-sim/shared";
 import { MainScene, type CameraMode } from "./scene";
+import { assessPlanetView } from "./planetView";
 import { HelmPanel } from "./HelmPanel";
 import { MainScreenPanel } from "./MainScreenPanel";
 import { SystemMap } from "./SystemMap";
@@ -62,6 +63,9 @@ function App() {
   }, []);
 
   const liveSystem = getStarSystem(snapshot?.universe.systemId ?? DEFAULT_SYSTEM_ID);
+  const opticalView = snapshot && cameraMode === "planet"
+    ? assessPlanetView(snapshot, planetFocusId, opticalZoom)
+    : null;
 
   useEffect(() => {
     let alive = true;
@@ -184,6 +188,35 @@ function App() {
             opticalZoom={opticalZoom}
             setOpticalZoom={setOpticalZoom}
           />
+        )}
+        {opticalView && opticalZoom >= 4 && opticalView.blocker && (
+          <div className="telescope-sightline-banner" role="status">
+            <strong><span aria-hidden="true">◉ </span>
+              {opticalView.body.name} is obscured by {opticalView.blocker.name}
+            </strong>
+            <span>
+              This is a real planetary occultation. Higher magnification cannot see through
+              {opticalView.blocker.name}; the star will reappear when the orbit clears the sightline.
+            </span>
+            <button onClick={() => {
+              setPlanetFocusId(opticalView.blocker!.id);
+              setOpticalZoom(1);
+            }}>View {opticalView.blocker.name} at 1×</button>
+          </div>
+        )}
+        {opticalView && opticalZoom >= 4 && !opticalView.blocker &&
+          opticalView.isSurfaceCloseup && (
+          <div className="telescope-sightline-banner" role="status">
+            <strong>{opticalView.body.name} surface close-up
+              {opticalView.surfaceIllumination ? " · " + opticalView.surfaceIllumination : ""}
+            </strong>
+            <span>
+              The world spans {opticalView.angularDiameterDegrees.toFixed(0)}°
+              but your field is {opticalView.fieldOfViewDegrees.toFixed(1)}°.
+              This shows one small patch, not the full planet.
+            </span>
+            <button onClick={() => setOpticalZoom(1)}>Return to 1× panorama</button>
+          </div>
         )}
         <CruiseStatusBanner snapshot={snapshot}/>
         <div className="scene-caption">
