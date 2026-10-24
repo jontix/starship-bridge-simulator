@@ -16,6 +16,7 @@ function App() {
   const [role, setRole] = useState<PlayerRole>("main-screen");
   const [cameraMode, setCameraMode] = useState<CameraMode>("planet");
   const [planetFocusId, setPlanetFocusId] = useState("auto");
+  const [opticalZoom, setOpticalZoom] = useState(1);
   const [room, setRoom] = useState<Room | null>(null);
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [status, setStatus] = useState("Connecting...");
@@ -151,6 +152,7 @@ function App() {
           selectedHeading={selectedHeading}
           onHeadingPicked={pickHeading}
           planetFocusId={planetFocusId}
+          opticalZoom={opticalZoom}
         />
         {role === "helm" ? (
           <HelmPanel
@@ -167,6 +169,8 @@ function App() {
             setMode={setCameraMode}
             planetFocusId={planetFocusId}
             setPlanetFocusId={setPlanetFocusId}
+            opticalZoom={opticalZoom}
+            setOpticalZoom={setOpticalZoom}
           />
         ) : (
           <MainScreenPanel
@@ -177,6 +181,8 @@ function App() {
             toggleAids={() => setShowNavigationAids(value => !value)}
             planetFocusId={planetFocusId}
             setPlanetFocusId={setPlanetFocusId}
+            opticalZoom={opticalZoom}
+            setOpticalZoom={setOpticalZoom}
           />
         )}
         <CruiseStatusBanner snapshot={snapshot}/>
