@@ -1,7 +1,7 @@
 name: Flight model checks
 on:
   push:
-    branches: [main, feature/flight-model-v1, feature/navigation-visuals, feature/first-star-system, feature/interplanetary-cruise, feature/planetary-rendering, feature/planetary-rendering-v2]
+    branches: [main, feature/flight-model-v1, feature/navigation-visuals, feature/first-star-system, feature/interplanetary-cruise, feature/planetary-rendering, feature/planetary-rendering-v2, feature/procedural-planet-generator-v1]
   pull_request:
     branches: [main, feature/flight-model-v1, feature/navigation-visuals, feature/first-star-system, feature/interplanetary-cruise, feature/planetary-rendering]
 # Rapid visual iteration should not leave dozens of obsolete GPU builds queued.
