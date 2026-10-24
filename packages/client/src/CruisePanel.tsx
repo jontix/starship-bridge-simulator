@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Room } from "colyseus.js";
 import {
-  CRUISE_LIMITS, SPEED_OF_LIGHT_MPS, formatAstronomicalDistance,
+  SPEED_OF_LIGHT_MPS, formatAstronomicalDistance,
   getStarSystem, type GameSnapshot
 } from "@bridge-sim/shared";
 
@@ -43,6 +43,11 @@ export function CruisePanel({
   const [throttle, setThrottle] = useState(100);
   const system = snapshot ? getStarSystem(snapshot.universe.systemId) : null;
   const cruise = snapshot?.cruise;
+  // Reflect a destination plotted in the System Map without overwriting a pending
+  // dropdown choice each time an unrelated telemetry snapshot arrives.
+  useEffect(() => {
+    if (cruise?.targetId) setSelectedId(cruise.targetId);
+  }, [cruise?.targetId]);
   const cruising = cruise?.mode !== "local";
   const canControl = Boolean(room && snapshot);
   const send = (command: unknown) => room?.send("cruise_command", command);
