@@ -30,6 +30,7 @@ uniform sampler2D surfaceSampler;
 uniform sampler2D nightSampler;
 uniform vec3 sunDirection;
 uniform float nightIntensity;
+uniform float oceanIntensity;
 uniform float stellar;
 void main(void) {
   vec4 surface = texture2D(surfaceSampler, vUV);
@@ -50,7 +51,8 @@ void main(void) {
   vec3 eye = normalize(-vWorldPosition);
   vec3 halfVector = normalize(lightDir + eye);
   float highlight = pow(max(0.0, dot(normal, halfVector)), 95.0);
-  color += surface.a * highlight * vec3(0.45, 0.67, 0.83) * softTerminator;
+  float oceanMask = texture2D(nightSampler, vUV).g * oceanIntensity;
+  color += oceanMask * highlight * vec3(0.45, 0.67, 0.83) * softTerminator;
   gl_FragColor = vec4(color, 1.0);
 }
 `;
@@ -104,7 +106,7 @@ function shader(scene: Scene, name: string, kind: string, transparent = false): 
   registerShaders();
   return new ShaderMaterial(name, scene, { vertex: "bridge" + kind, fragment: "bridge" + kind }, {
     attributes: ["position", "normal", "uv"],
-    uniforms: ["world", "worldViewProjection", "sunDirection", "nightIntensity", "stellar", "atmosphereColor"],
+    uniforms: ["world", "worldViewProjection", "sunDirection", "nightIntensity", "oceanIntensity", "stellar", "atmosphereColor"],
     samplers: ["surfaceSampler", "nightSampler", "cloudSampler"],
     needAlphaBlending: transparent,
     needAlphaTesting: false
@@ -116,6 +118,7 @@ export function surfaceMaterial(scene: Scene, body: CelestialBody, textures: Pla
   material.setTexture("surfaceSampler", textures.surface);
   material.setTexture("nightSampler", textures.night ?? textures.surface);
   material.setFloat("nightIntensity", textures.night ? 1 : 0);
+  material.setFloat("oceanIntensity", body.appearance?.archetype === "ocean" ? 1 : 0);
   material.setFloat("stellar", body.appearance?.archetype === "stellar" ? 1 : 0);
   material.backFaceCulling = true;
   return material;
