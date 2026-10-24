@@ -1,3 +1,3 @@
-export * from "./math";
-export * from "./types";
-export * from "./simulation";
+export * from "./math.js";
+export * from "./types.js";
+export * from "./simulation.js";
