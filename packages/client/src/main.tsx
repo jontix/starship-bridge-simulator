@@ -4,6 +4,7 @@ import { Client, type Room } from "colyseus.js";
 import { DEFAULT_SYSTEM_ID, getStarSystem, type GameSnapshot, type PlayerRole } from "@bridge-sim/shared";
 import { MainScene, type CameraMode } from "./scene";
 import { assessPlanetView } from "./planetView";
+import type { SurfaceDetailMode } from "./surfaceDetail";
 import { HelmPanel } from "./HelmPanel";
 import { MainScreenPanel } from "./MainScreenPanel";
 import { SystemMap } from "./SystemMap";
@@ -18,6 +19,7 @@ function App() {
   const [cameraMode, setCameraMode] = useState<CameraMode>("planet");
   const [planetFocusId, setPlanetFocusId] = useState("auto");
   const [opticalZoom, setOpticalZoom] = useState(1);
+  const [surfaceDetailMode, setSurfaceDetailMode] = useState<SurfaceDetailMode>("high");
   const [room, setRoom] = useState<Room | null>(null);
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [status, setStatus] = useState("Connecting...");
@@ -161,6 +163,7 @@ function App() {
           onHeadingPicked={pickHeading}
           planetFocusId={planetFocusId}
           opticalZoom={opticalZoom}
+          surfaceDetailMode={surfaceDetailMode}
         />
         {role === "helm" ? (
           <HelmPanel
@@ -179,6 +182,8 @@ function App() {
             setPlanetFocusId={setPlanetFocusId}
             opticalZoom={opticalZoom}
             setOpticalZoom={setOpticalZoom}
+            surfaceDetailMode={surfaceDetailMode}
+            setSurfaceDetailMode={setSurfaceDetailMode}
           />
         ) : (
           <MainScreenPanel
@@ -191,6 +196,8 @@ function App() {
             setPlanetFocusId={setPlanetFocusId}
             opticalZoom={opticalZoom}
             setOpticalZoom={setOpticalZoom}
+            surfaceDetailMode={surfaceDetailMode}
+            setSurfaceDetailMode={setSurfaceDetailMode}
           />
         )}
         {opticalView && opticalZoom >= 4 && opticalView.blocker && (
