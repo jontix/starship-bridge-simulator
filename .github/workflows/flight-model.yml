@@ -1,9 +1,9 @@
 name: Flight model checks
 on:
   push:
-    branches: [main, feature/flight-model-v1, feature/navigation-visuals, feature/first-star-system]
+    branches: [main, feature/flight-model-v1, feature/navigation-visuals, feature/first-star-system, feature/interplanetary-cruise]
   pull_request:
-    branches: [main, feature/flight-model-v1, feature/navigation-visuals]
+    branches: [main, feature/flight-model-v1, feature/navigation-visuals, feature/first-star-system]
 jobs:
   build-and-test:
     runs-on: ${{ matrix.os }}
