@@ -74,3 +74,23 @@ export const rotationError = (current: Quat, desired: Quat): { axis: Vec3; radia
     radians: 2 * Math.atan2(sinHalf, delta.w)
   };
 };
+
+/** Convert a world-frame bearing/elevation into a unit direction.
+ *  Zero yaw/pitch aims along +Z; +90° yaw points toward +X; positive pitch aims up.
+ */
+export const headingToDirection = (yaw: number, pitch: number): Vec3 =>
+  vec3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+
+/** Convert a clicked point on a world-aligned direction sphere to a Helm heading.
+ *  The direction is from the sphere centre toward the point, not from the camera.
+ *  A zero-length selection is invalid (rather than silently turning the ship).
+ */
+export const directionToHeading = (direction: Vec3): { yaw: number; pitch: number } | null => {
+  const magnitude = length(direction);
+  if (!Number.isFinite(magnitude) || magnitude < 1e-10) return null;
+  const horizontal = Math.hypot(direction.x, direction.z);
+  return {
+    yaw: Math.atan2(direction.x, direction.z),
+    pitch: Math.atan2(direction.y, horizontal)
+  };
+};
