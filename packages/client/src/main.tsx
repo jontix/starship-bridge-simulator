@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Client, type Room } from "colyseus.js";
-import type { GameSnapshot, PlayerRole } from "@bridge-sim/shared";
+import { DEFAULT_SYSTEM_ID, getStarSystem, type GameSnapshot, type PlayerRole } from "@bridge-sim/shared";
 import { MainScene, type CameraMode } from "./scene";
 import { HelmPanel } from "./HelmPanel";
 import { MainScreenPanel } from "./MainScreenPanel";
+import { SystemMap } from "./SystemMap";
 import type { PickedHeading, SelectedHeading } from "./navigationVisuals";
 import "./styles.css";
 
@@ -17,6 +18,7 @@ function App() {
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [status, setStatus] = useState("Connecting...");
   const [showHeadingSphere, setShowHeadingSphere] = useState(false);
+  const [showSystemMap, setShowSystemMap] = useState(false);
   const [showNavigationAids, setShowNavigationAids] = useState(true);
   const [selectedHeading, setSelectedHeading] = useState<SelectedHeading>({ yaw: 0, pitch: 0, roll: 0 });
 
@@ -30,7 +32,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (role !== "helm") return;
+    if (role !== "helm" || showSystemMap) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() !== "h" || event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
       const focused = event.target;
@@ -40,7 +42,22 @@ function App() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [role]);
+  }, [role, showSystemMap]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { setShowSystemMap(false); return; }
+      if (event.key.toLowerCase() !== "m" || event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
+      const focused = event.target;
+      if (focused instanceof HTMLElement && focused.closest("input,select,textarea,[contenteditable='true']")) return;
+      event.preventDefault();
+      setShowSystemMap(value => !value);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  const liveSystem = getStarSystem(snapshot?.universe.systemId ?? DEFAULT_SYSTEM_ID);
 
   useEffect(() => {
     let alive = true;
@@ -103,6 +120,13 @@ function App() {
       <header>
         <strong>STARSHIP / BRIDGE</strong>
         <span className="connection-status">{status}</span>
+        <button className={showSystemMap ? "system-map-toggle active" : "system-map-toggle"}
+          onClick={() => setShowSystemMap(value => !value)}
+          aria-expanded={showSystemMap}
+          title="Open the astronomical system navigation chart">
+          <span className="system-map-toggle-label">☉ {liveSystem.name}</span>
+          <span className="system-map-toggle-action">System Map <kbd>M</kbd></span>
+        </button>
         <label className="role-select">
           Station
           <select value={role} onChange={(event) => setRole(event.target.value as PlayerRole)}>
@@ -142,8 +166,10 @@ function App() {
             toggleAids={() => setShowNavigationAids(value => !value)}
           />
         )}
-        <div className="scene-caption">NAVIGATION TRAINING · 6DOF · WORLD +Y UP · 30 Hz SERVER</div>
-        {role === "helm" && showHeadingSphere && (
+        <div className="scene-caption">
+          {liveSystem.name.toUpperCase()} · LOCAL FRAME: {liveSystem.start.referenceBodyId.toUpperCase()} · 6DOF / 30 HZ
+        </div>
+        {role === "helm" && showHeadingSphere && !showSystemMap && (
           <div className="nav-legend" aria-label="Heading sphere legend">
             <strong>WORLD HEADING SPHERE</strong>
             <span><i className="swatch preview" /> Cyan · selected (not sent)</span>
@@ -153,6 +179,7 @@ function App() {
             <small>Drag to orbit · click sphere to select · Set attitude to engage</small>
           </div>
         )}
+        {showSystemMap && <SystemMap snapshot={snapshot} onClose={() => setShowSystemMap(false)} />}
       </main>
     </div>
   );
