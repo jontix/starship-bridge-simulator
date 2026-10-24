@@ -1,6 +1,7 @@
 import { DynamicTexture, type Scene } from "@babylonjs/core";
 import type { CelestialBody, PlanetAppearance } from "@bridge-sim/shared";
 import { fictionalOceanTerrain } from "./havenGeography";
+import { craterField } from "./craterTerrain";
 
 export type PlanetTextures = {
   surface: DynamicTexture;
@@ -109,24 +110,36 @@ const colorAt = (appearance: PlanetAppearance, latitude: number,
     return { color: palette(color, [223, 191, 151], bright * 0.3), ocean: 0, land: true };
   }
   if (appearance.archetype === "airless") {
-    const crater = Math.abs(Math.sin(87 * longitude + 31 * latitude + terrain * 12));
-    const grey = 65 + terrain * 105 + detail * 35 - crater * 12;
-    return { color: [grey, grey + 4, grey + 8], ocean: 0, land: true };
+    const impacts = craterField(x, y, z, seed);
+    const terrainShade = Math.max(0.0, terrain + detail * 0.32 + impacts * 1.5);
+    const grey = 48 + terrainShade * 111;
+    const rimHighlight = saturate(impacts * 4.1);
+    const shade = grey + rimHighlight * 35;
+    return { color: [shade * 0.92, shade * 0.96, shade + 7], ocean: 0, land: true };
   }
 
-  const band = Math.sin(latitude * (appearance.archetype === "ice-giant" ? 21 : 42) +
-    8 * (terrain - 0.5) + 2.5 * Math.sin(longitude * 4 + latitude * 13));
-  const turbulence = fractal(x * 18, y * 18, z * 18, seed + 829, 3) - 0.5;
-  const ripple = saturate(0.5 + band * 0.35 + turbulence * 0.3);
+  // Differentially rotating gas bands and coherent, elliptical major storms.
+  // The texture is generated on a unit sphere to avoid longitude seams.
+  const jet = latitude * (appearance.archetype === "ice-giant" ? 25 : 53)
+    + (terrain - 0.5) * 11
+    + Math.sin(longitude * 4 + latitude * 12) * 0.5;
+  const jetBand = Math.sin(jet) * 0.24 + Math.sin(jet * 2.23) * 0.10;
+  const turbulence = fractal(x * 19, y * 19, z * 19, seed + 829, 3) - 0.5;
+  const ripple = saturate(0.54 + jetBand + turbulence * 0.26);
   if (appearance.archetype === "gas-giant") {
-    let color = palette([117, 75, 67], [224, 180, 119], ripple);
-    const storm = Math.pow(Math.max(0, Math.sin(longitude - 1.3)), 18) *
-      Math.pow(Math.max(0, Math.cos((latitude + 0.36) * 6)), 7);
-    color = palette(color, [181, 88, 59], storm * 0.85);
+    let color = palette([108, 72, 67], [232, 193, 136], ripple);
+    const longitudeDiff = Math.atan2(Math.sin(longitude - 1.3), Math.cos(longitude - 1.3));
+    const stormRadius = Math.sqrt(
+      (longitudeDiff / 0.31) ** 2 + ((latitude + 0.34) / 0.17) ** 2
+    );
+    const stormCore = Math.exp(-stormRadius ** 3.2);
+    const stormRim = Math.exp(-((stormRadius - 1.1) / 0.29) ** 2);
+    color = palette(color, [175, 71, 52], stormCore * 0.9);
+    color = palette(color, [237, 208, 174], stormRim * 0.56);
     return { color, ocean: 0, land: false };
   }
   return {
-    color: palette([29, 96, 145], [132, 217, 223], ripple * 0.85),
+    color: palette([21, 82, 133], [132, 213, 226], ripple * 0.88),
     ocean: 0, land: false
   };
 };
