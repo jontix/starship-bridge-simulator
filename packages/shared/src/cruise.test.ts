@@ -82,7 +82,7 @@ test("ship transits to the moving target, decelerates and matches its local fram
   for (let tick = 1; tick < 30 * 90; tick++) {
     const now = start + tick * dt;
     const outcome = stepCruise(state, ship, system, now, dt, frame);
-    if (state.mode === "cruise") {
+    if (String(state.mode) === "cruise") {
       sawCruise = true;
       peakSpeed = Math.max(peakSpeed, state.speedMetersPerSecond);
       assert.ok(state.progress >= 0 && state.progress <= 1);
