@@ -115,6 +115,37 @@ try {
   await page.screenshot({ path: haven, fullPage: true, animations: "disabled" });
   console.log("Captured Haven high-orbit view:", haven);
 
+  // Regression for the user's actual "blank grey sky" reproduction:
+  // a correctly scaled world spans ~139° while an 8x telescope sees ~5.7°.
+  // The UI must identify this as a surface patch and offer a fast way back.
+  await page.getByLabel("Focused planet").selectOption("haven");
+  await page.getByLabel("Optical magnification").selectOption("8");
+  await page.getByText(/8× close-up: Haven/).waitFor({ timeout: 10_000 });
+  await page.getByRole("button", { name: "Return to 1× orbital panorama" }).first().click();
+  assert.equal(await page.getByLabel("Optical magnification").inputValue(), "1");
+
+  // Tactical mode is a local instrument view. The planet sky must not
+  // consume the tactical grid as it did in the original screenshot.
+  await page.getByLabel("Camera mode").selectOption("tactical");
+  await sleep(350);
+  const tactical = join(screenshots, "tactical-instrument-v2.png");
+  const tacticalPixels = PNG.sync.read(await page.screenshot({
+    path: tactical, fullPage: true, animations: "disabled"
+  }));
+  let warmBackgroundPixels = 0;
+  for (let y = 140; y < Math.min(tacticalPixels.height - 85, 790); y += 5) {
+    for (let x = 355; x < tacticalPixels.width - 75; x += 5) {
+      const p = (y * tacticalPixels.width + x) * 4;
+      const r = tacticalPixels.data[p], g = tacticalPixels.data[p + 1],
+        b = tacticalPixels.data[p + 2];
+      if (r > 75 && r > b * 1.5 && g > b * 1.18) warmBackgroundPixels++;
+    }
+  }
+  assert.ok(warmBackgroundPixels < 400,
+    "Tactical instrument sky still contains an enormous orange planet: " + warmBackgroundPixels);
+  console.log("Captured uncluttered tactical instrument view:", tactical);
+  await page.getByLabel("Camera mode").selectOption("planet");
+
   await page.getByLabel("Focused planet").selectOption("aster");
   await page.getByLabel("Optical magnification").selectOption("32");
   await page.getByText("Centre sightline").locator("..").getByText("Clear").waitFor({
