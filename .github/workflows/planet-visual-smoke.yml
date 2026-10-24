@@ -5,6 +5,11 @@ on:
     branches: [feature/planetary-rendering-v2]
   workflow_dispatch:
 
+# Rapid visual iteration should not leave dozens of obsolete GPU builds queued.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   chromium-planetary-view:
     runs-on: ubuntu-latest
