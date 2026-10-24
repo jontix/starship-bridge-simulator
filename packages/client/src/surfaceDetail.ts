@@ -11,7 +11,7 @@ export type SurfaceDetailMode = "off" | "balanced" | "high";
 export const SURFACE_DETAIL_MODES: readonly SurfaceDetailMode[] =
   ["off", "balanced", "high"];
 
-export const DETAIL_BASE_FREQUENCIES = [140, 420, 1190] as const;
+export const DETAIL_BASE_FREQUENCIES = [140, 620, 2500] as const;
 
 export const SURFACE_DETAIL_FACTORS: Record<SurfaceDetailMode, number> = {
   off: 0,
