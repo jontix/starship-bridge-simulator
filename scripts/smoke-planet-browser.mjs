@@ -73,8 +73,11 @@ try {
   const page = await context.newPage();
   const shaderFailures = [];
   const runtimeErrors = [];
+  const browserLog = [];
   page.on("pageerror", error => runtimeErrors.push(String(error)));
   page.on("console", message => {
+    const output = message.type().toUpperCase() + ": " + message.text();
+    if (browserLog.length < 600) browserLog.push(output);
     if (message.type() === "error") {
       const text = message.text();
       runtimeErrors.push(text);
