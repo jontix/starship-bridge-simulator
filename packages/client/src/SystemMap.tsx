@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import {
-  METRES_PER_AU, SECONDS_PER_DAY, bodyPositionAt, formatAstronomicalDistance,
+  METRES_PER_AU, SECONDS_PER_DAY, formatAstronomicalDistance,
   getBody, getStarSystem, listStarSystems, localShipToSystemPosition,
   relativeOrbitalPosition, systemPositionsAt,
   type CelestialBody, type GameSnapshot, type StarSystem, type Vec3
@@ -10,7 +10,6 @@ type MapProps = { snapshot: GameSnapshot | null; onClose: () => void };
 
 const CENTRE = { x: 334, y: 310 };
 const ORBIT_RADIUS = 260;
-const TAU = Math.PI * 2;
 
 /** Angular directions preserved; distances compressed logarithmically in the diagram only. */
 export function mapProjection(v: Vec3, maxAu: number): { x: number; y: number } {
@@ -45,8 +44,9 @@ export function SystemMap({ snapshot, onClose }: MapProps) {
   const universeNow = snapshot?.universe.epochSeconds ?? system.epochUnixSeconds;
   const previewTime = universeNow + previewDays * SECONDS_PER_DAY;
   const positions = useMemo(() => systemPositionsAt(system, previewTime), [system, previewTime]);
+  const livePositions = useMemo(() => systemPositionsAt(system, universeNow), [system, universeNow]);
   const selected = bodies.find(body => body.id === selectionId) ?? bodies.find(body => body.id === "haven") ?? bodies[0];
-  const selectedPosition = positions[selected.id];
+  const selectedPositionLive = livePositions[selected.id];
   const selectedMapParent = chooseMapParent(system, selected);
   const orbitTracks = useMemo(() => bodies
     .filter(body => body.kind === "planet" && body.orbit)
@@ -66,11 +66,11 @@ export function SystemMap({ snapshot, onClose }: MapProps) {
   const shipPosition = snapshot
     ? localShipToSystemPosition(system, snapshot.ship.position, universeNow)
     : null;
-  const distance = shipPosition && selectedPosition
+  const distance = shipPosition && selectedPositionLive
     ? Math.hypot(
-        selectedPosition.x - shipPosition.x,
-        selectedPosition.y - shipPosition.y,
-        selectedPosition.z - shipPosition.z
+        selectedPositionLive.x - shipPosition.x,
+        selectedPositionLive.y - shipPosition.y,
+        selectedPositionLive.z - shipPosition.z
       ) : null;
   const parent = selected.parentId ? getBody(system, selected.parentId) : null;
   const orbitalRadius = selected.orbit?.semiMajorAxisMeters;
@@ -135,7 +135,7 @@ export function SystemMap({ snapshot, onClose }: MapProps) {
                   {satellites > 0 && <text x={point.x + 15} y={point.y + 5} fill="#7edec3" fontSize="9">{satellites} nearby orbits</text>}
                 </g>;
               })}
-              {shipPosition && (() => {
+              {shipPosition && !elapsedPreview && (() => {
                 const point = mapProjection(shipPosition, maxAu);
                 return <g>
                   <circle cx={point.x} cy={point.y} r="17" fill="none" stroke="#6effd7" strokeWidth="1.2" strokeDasharray="2 4"/>
@@ -160,7 +160,7 @@ export function SystemMap({ snapshot, onClose }: MapProps) {
                 <span>{previewDays > 0 ? "+" : ""}{previewDays} days</span>
                 <span>{new Date(previewTime * 1000).toISOString().slice(0, 10)} UTC</span>
               </div>
-              <p>{elapsedPreview ? "PREVIEW ONLY — live ship movement and server time are unchanged." :
+              <p>{elapsedPreview ? "PREVIEW ONLY — live ship marker is hidden; the ship, server clock and live distances are unchanged." :
                 "LIVE: orbital positions are derived from authoritative simulation time."}</p>
             </div>
           </div>
