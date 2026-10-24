@@ -6,11 +6,15 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run build -w @bridge-sim/shared && concurrently \"npm run dev -w @bridge-sim/server\" \"npm run dev -w @bridge-sim/client\" \"npm run dev -w @bridge-sim/shared\"",
-    "build": "npm run build -w @bridge-sim/shared && npm run build -w @bridge-sim/server && npm run build -w @bridge-sim/client"
+    "dev": "npm --prefix packages/shared run build && concurrently \"npm --prefix packages/server run dev\" \"npm --prefix packages/client run dev\" \"npm --prefix packages/shared run dev\"",
+    "build": "npm --prefix packages/shared run build && npm --prefix packages/server run build && npm --prefix packages/client run build"
   },
   "devDependencies": {
     "concurrently": "^9.0.0",
     "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20.19.0",
+    "npm": ">=7"
   }
 }
