@@ -2,3 +2,8 @@ node_modules
 dist
 .env
 .DS_Store
+
+# Generated deterministic planet maps and fixed-lighting previews.
+# Regenerate from scripts/planet-generator rather than committing binary assets.
+packages/client/src/assets/generated-planets/
+packages/client/public/planet-lab/
