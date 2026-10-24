@@ -10,6 +10,7 @@ import {
 } from "@bridge-sim/shared";
 import { atmosphereMaterial, cloudMaterial, placeholderMaterial, surfaceMaterial } from "./planetMaterials";
 import { generatePlanetTextures } from "./planetTextures";
+import { createPlanetRings } from "./planetRings";
 
 const PROXY_DISTANCE = 8_000;
 const TAU = Math.PI * 2;
@@ -90,6 +91,8 @@ function createGlobe(scene: Scene, body: CelestialBody): Globe {
     atmosphere.material = atmosphereMaterial(scene, body);
     atmosphere.isPickable = false;
   }
+
+  createPlanetRings(scene, body, root);
 
   const glint = MeshBuilder.CreateSphere("unresolved-disc-glint-" + body.id, {
     diameter: 11, segments: 10
