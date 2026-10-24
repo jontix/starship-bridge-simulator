@@ -270,12 +270,8 @@ export function MainScene({
           liveSystem, focusedWorld.id, visualSnapshot.universe.epochSeconds
         );
         const focusDirection = normalize(sub(bodySystemPosition, absoluteShip));
-        const cameraArm = toVector(rotateVector(q, vec3(0, 32, -145)));
-        planetCamera.position = Vector3.Lerp(
-          planetCamera.position, renderPosition.add(cameraArm), follow
-        );
-        // In low orbit the world subtends >100 degrees. Aim near the limb,
-        // otherwise its horizon is invisible and the camera only sees ocean.
+        // In low orbit the planet subtends >100 degrees: aim near the limb
+        // rather than the centre to keep a curved horizon in the frame.
         const angularRadius = apparentBodyGeometry(
           focusedWorld.radiusMeters, bodySystemPosition, absoluteShip
         ).apparentAngularRadiusRadians;
@@ -284,9 +280,17 @@ export function MainScene({
         if (up.lengthSquared() < 0.001) up.copyFrom(Vector3.Right());
         up.normalize();
         const framingOffset = Math.max(0, Math.min(1.43, angularRadius - 0.17));
-        const planetAim = planetUnit.scale(Math.cos(framingOffset))
-          .add(up.scale(Math.sin(framingOffset))).normalize().scale(10_000);
-        planetCamera.setTarget(renderPosition.add(planetAim));
+        const planetAimDirection = planetUnit.scale(Math.cos(framingOffset))
+          .add(up.scale(Math.sin(framingOffset))).normalize();
+        // Position the camera *behind this aim direction*, not behind the
+        // ship's nose. Otherwise the ship often falls outside the field of
+        // view when a planet's limb is far off the ship-forward axis.
+        const cameraArm = planetAimDirection.scale(-190)
+          .add(toVector(rotateVector(q, vec3(35, 22, 0))));
+        planetCamera.position = Vector3.Lerp(
+          planetCamera.position, renderPosition.add(cameraArm), follow
+        );
+        planetCamera.setTarget(renderPosition.add(planetAimDirection.scale(10_000)));
         const local = latest.cruise.mode === "local";
         nav.update(pose, latest.ship, latest.tick, renderOrigin, {
           sphere: local && propsRef.current.showHeadingSphere,
