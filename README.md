@@ -185,6 +185,37 @@ scattering or close-range planetary terrain.
 Full renderer architecture and manual checks:
 [Planet Rendering v2](docs/planetary-rendering-v2.md).
 
+## Procedural Planet Generator v1 — art-directed worlds
+
+The `feature/procedural-planet-generator-v1` branch adds a **reproducible,
+seed-driven procedural planet asset pipeline** for Haven and future terrestrial
+worlds. It keeps Babylon.js, true astronomical scales and all ship/flight
+mechanics unchanged.
+
+```powershell
+npm.cmd run dev
+```
+
+The root startup generates any missing Haven PNGs **once** and reuses the
+cache rather than rebuilding them on every browser connection. Explore
+`http://127.0.0.1:5173/planet-lab.html` or select **Planet Lab** from the
+Bridge header. This separate workspace offers **fixed daylight, terminator
+and night previews**, a surface/biome map gallery, ocean coverage readout,
+seed and environment parameters. Copy the generated command to apply changes:
+
+```powershell
+npm.cmd run generate:planets -- --seed 48271 --width 1024 --ocean 0.68
+```
+
+Generated ocean coverage is calibrated per seed. The output includes albedo,
+cloud, night-light/ocean masks, height, roughness, normals and biomes. Our
+existing Babylon planetary shader loads the precomputed surface/cloud/night
+PNGs instead of regenerating expensive browser textures on each session;
+the other diagnostic maps are reserved for future renderer improvements.
+Generated binaries are intentionally git-ignored, but the generator,
+presets and tests are versioned. For details see
+[Procedural Planet Generator guide](docs/procedural-planet-generator.md).
+
 ## Monorepo
 
 - `packages/shared` — flight math, simulation, commands and tests

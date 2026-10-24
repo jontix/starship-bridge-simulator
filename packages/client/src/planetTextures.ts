@@ -144,6 +144,33 @@ const colorAt = (appearance: PlanetAppearance, latitude: number,
   };
 };
 
+
+/**
+ * Tiny placeholder while bundled maps load asynchronously. Used only if Vite
+ * has already discovered precomputed planet textures at startup; avoids
+ * calculating multi-million-pixel noise on the browser's main thread.
+ */
+export function createPrecomputedPlanetPlaceholders(scene:Scene, body:CelestialBody):PlanetTextures {
+  const surface=newTexture(scene,body.id+"-awaiting-precomputed-surface",2,1);
+  const albedo=new Uint8ClampedArray([17,48,78,255, 19,51,82,255]);
+  put(surface,albedo,2,1);
+
+  let night:DynamicTexture|null=null;
+  if(body.appearance?.archetype==="ocean"){
+    night=newTexture(scene,body.id+"-awaiting-precomputed-night",2,1);
+    const pixel=new Uint8ClampedArray([0,255,0,255,0,255,0,255]);
+    put(night,pixel,2,1);
+  }
+  let clouds:DynamicTexture|null=null;
+  if(body.appearance?.clouds){
+    clouds=newTexture(scene,body.id+"-awaiting-precomputed-clouds",2,1);
+    clouds.hasAlpha=true;
+    const transparent=new Uint8ClampedArray([255,255,255,0,255,255,255,0]);
+    put(clouds,transparent,2,1);
+  }
+  return {surface,night,clouds};
+}
+
 /** Lazy-load once a planet is actually visible; texture resolution deliberately
  * capped for browser startup/performance until adaptive texture LOD is introduced.
  */

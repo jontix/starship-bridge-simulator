@@ -9,8 +9,8 @@ import {
   type CelestialBody, type GameSnapshot, type StarSystem, type Vec3
 } from "@bridge-sim/shared";
 import { atmosphereMaterial, cloudMaterial, placeholderMaterial, surfaceMaterial, starMaterial } from "./planetMaterials";
-import { generatePlanetTextures } from "./planetTextures";
-import { attachAuthoredPlanetTextures } from "./planetAssetOverrides";
+import { generatePlanetTextures, createPrecomputedPlanetPlaceholders } from "./planetTextures";
+import { attachAuthoredPlanetTextures, hasBundledPlanetAssets } from "./planetAssetOverrides";
 import { createPlanetRings } from "./planetRings";
 import { createStellarCorona, updateStellarCorona } from "./stellarEffects";
 
@@ -218,7 +218,11 @@ export function createPlanetaryBackground(engine: Engine) {
       }
 
       if (!globe.loaded && pixelDiameter >= 3.5) {
-        const textures = generatePlanetTextures(sky, body);
+        // Haven (and any later generated bodies) load offline-built PNG maps.
+        // Unknown systems still have the original runtime procedural fallback.
+        const textures = hasBundledPlanetAssets(body.id)
+          ? createPrecomputedPlanetPlaceholders(sky,body)
+          : generatePlanetTextures(sky,body);
         const old = globe.surface.material;
         const litSurface = body.appearance?.archetype === "stellar"
           ? starMaterial(sky, body, textures)

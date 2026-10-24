@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Starship Bridge — Planet Lab</title>
+<style>
+:root{font-family:Inter,system-ui,Segoe UI,sans-serif;color:#e8f5fa;background:#060d19}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at 65% -20%,#153149,#060d19 50%);min-height:100vh}
+header{padding:18px clamp(16px,4vw,56px);border-bottom:1px solid #274056;display:flex;align-items:center;gap:22px}
+header b{letter-spacing:.12em;font-size:13px;color:#8ce6e5}
+header a{color:#b9dcfc;text-decoration:none;font-size:13px}
+main{max-width:1540px;margin:auto;padding:28px clamp(14px,3vw,40px)}
+h1{font-size:clamp(24px,3vw,36px);margin:0 0 10px}
+p{line-height:1.55;color:#aabfd0}
+.intro{max-width:900px}
+.layout{display:grid;grid-template-columns:320px minmax(0,1fr);gap:24px;margin-top:24px}
+aside,.panel{border:1px solid #2b4358;border-radius:14px;background:#0b1828df;padding:22px}
+h2{font-size:15px;margin:0 0 12px;color:#89d7ed}
+label{display:flex;flex-direction:column;gap:5px;margin:16px 0;font-size:12px;color:#99c5d9}
+input,select,button{font:inherit;border:1px solid #365670;border-radius:7px;background:#12253b;color:#effaff;padding:9px 10px}
+input[type=range]{width:100%;accent-color:#61d3ef;border:0;padding:0}
+button{cursor:pointer;font-weight:700;background:#1c5c79}
+button:hover{background:#247699}
+.control-label{display:flex;justify-content:space-between}
+.control-label strong{color:#eef8ff}
+.readouts{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.metric{padding:10px 11px;border:1px solid #234258;background:#0d2336;border-radius:8px;font-size:12px}
+.metric strong{display:block;font-size:18px;color:#9de9df;margin-top:4px}
+.previews{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}
+.previews figure{margin:0;border-radius:10px;border:1px solid #27435b;overflow:hidden;background:#040915}
+.previews img{width:100%;display:block;aspect-ratio:1;object-fit:contain}
+.previews figcaption{padding:8px;text-align:center;color:#b3d2e2;font-size:12px;background:#111f2e}
+.maps{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.maps img{display:block;width:100%;aspect-ratio:2/1;object-fit:cover;background:#051224;border-radius:6px}
+.code{background:#040e19;border:1px solid #1b3950;color:#d0eff7;white-space:pre-wrap;overflow-wrap:anywhere;padding:12px;border-radius:9px;font:12px/1.5 Consolas,monospace}
+.label{font-size:12px;font-weight:700;color:#c4f2f5;margin-bottom:8px}
+.notice{border-left:3px solid #78ceef;padding:10px 13px;background:#10334a;color:#b9dfeb;font-size:13px;line-height:1.5;margin-bottom:15px}
+.error{color:#ffbab4}
+.actions{display:flex;gap:9px;flex-wrap:wrap}
+.actions button{font-size:12px}
+@media(max-width:1000px){.layout{grid-template-columns:1fr}.previews{gap:5px}.maps{grid-template-columns:1fr}}
+@media(max-width:500px){.previews{grid-template-columns:1fr}.readouts{grid-template-columns:1fr}header{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<header><b>STARSHIP / PLANET LAB</b><a href="/">← Return to Bridge</a><span style="color:#6e95ab;font-size:12px">Procedural Planet Generator v1</span></header>
+<main>
+<h1>Build worlds, not random spheres.</h1>
+<p class="intro">Repeatable, art-directed planetary maps generated <strong>before</strong> the simulator starts. Compare three fixed lighting views without moving the ship or waiting for an orbital phase. Modify parameters, copy the exact build command, then rerun it in your terminal to update the previews and in-game planet.</p>
+<div class="layout">
+<aside>
+<h2>Generator controls</h2>
+<label>Planet preset <select id="preset"><option value="haven">Haven — ocean world</option><option value="verdant">Verdant — alternative seed</option></select></label>
+<label>Seed <input id="seed" type="number" min="0" max="2147483647" step="1"></label>
+<label>Output width <select id="width"><option value="512">512 — fast iteration</option><option value="1024">1024 — baseline</option><option value="2048">2048 — high detail</option></select></label>
+<div id="parameters"></div>
+<div class="notice">Changing a value prepares a <strong>new generation command</strong>. The previews show the last generated maps until you execute that command and refresh this page. Orbital physics and planet radii are never modified.</div>
+<div class="label">Regeneration command</div>
+<div id="command" class="code"></div>
+<div class="actions" style="margin-top:12px"><button id="copy">Copy command</button><button id="reset">Restore built preset</button></div>
+</aside>
+<section class="panel">
+<h2>Lighting review · reproducible views</h2>
+<div id="status" class="notice">Loading generated Haven assets…</div>
+<div class="readouts"><div class="metric">Actual ocean coverage<strong id="oceanStat">—</strong></div><div class="metric">Cloud distribution<strong id="cloudStat">—</strong></div><div class="metric">Generator seed<strong id="seedStat">—</strong></div></div>
+<div class="previews">
+<figure><img id="day" alt="Daylight planet preview"><figcaption>Daylight</figcaption></figure>
+<figure><img id="terminator" alt="Planet preview at terminator"><figcaption>Terminator</figcaption></figure>
+<figure><img id="night" alt="Night-side planet preview"><figcaption>Night side</figcaption></figure>
+</div>
+<h2>Map inspection</h2>
+<div class="maps">
+<div><div class="label">Surface colour (albedo)</div><img id="albedo" alt="Generated equirectangular albedo map"></div>
+<div><div class="label">Biome classification</div><img id="biome" alt="Generated biome map"></div>
+<div><div class="label">Elevation / sea-level diagnostic</div><img id="height" alt="Generated height map"></div>
+<div><div class="label">Cloud alpha</div><img id="clouds" alt="Generated cloud map"></div>
+</div>
+<p style="font-size:12px">Additional exported maps: tangent-space normals, roughness and packed night-light/ocean mask. The game uses the generated surface/cloud/night maps. These three lighting previews are deterministic software look-development images, <strong>not exact Babylon shader captures</strong>.</p>
+</section>
+</div></main>
+<script type="module" src="/src/planetLab.ts"></script>
+</body></html>
