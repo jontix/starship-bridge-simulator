@@ -329,3 +329,19 @@ kbd { display: inline-block; background: #0b1727; color: #c2d5e9; border: 1px so
     max-width: none;
   }
 }
+
+/* Procedural look-development workspace link */
+.planet-lab-toplink {
+  color: #b0e6ee;
+  padding: 7px 10px;
+  margin-left: 4px;
+  border: 1px solid rgba(111,181,203,.35);
+  border-radius: 7px;
+  text-decoration: none;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.planet-lab-toplink:hover {
+  background: #1a3d51;
+  border-color: #87cbdc;
+}
