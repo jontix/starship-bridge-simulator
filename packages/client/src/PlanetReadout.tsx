@@ -5,8 +5,14 @@ import {
 } from "@bridge-sim/shared";
 
 export function PlanetViewControls({
-  snapshot, focusId, setFocusId
-}: { snapshot: GameSnapshot | null; focusId: string; setFocusId: (id: string) => void }) {
+  snapshot, focusId, setFocusId, opticalZoom, setOpticalZoom
+}: {
+  snapshot: GameSnapshot | null;
+  focusId: string;
+  setFocusId: (id: string) => void;
+  opticalZoom: number;
+  setOpticalZoom: (zoom: number) => void;
+}) {
   if (!snapshot) return null;
   const system = getStarSystem(snapshot.universe.systemId);
   const body = choosePlanetFocus(system, snapshot.universe.referenceBodyId,
@@ -26,6 +32,15 @@ export function PlanetViewControls({
         ))}
       </select>
     </label>
+    <label className="planet-view-label orbital-optical-zoom">
+      <span>Optical magnification (planet camera only)</span>
+      <select aria-label="Optical magnification" value={opticalZoom}
+        onChange={event => setOpticalZoom(Number(event.target.value))}>
+        {[1, 2, 4, 8, 16, 32].map(zoom => (
+          <option value={zoom} key={zoom}>{zoom}× {zoom >= 4 ? "· telescope" : "· exterior view"}</option>
+        ))}
+      </select>
+    </label>
     <div className="planet-view-stats">
       <div><span>Focused world</span><strong>{body.name}</strong></div>
       <div><span>Physical radius</span><strong>{formatAstronomicalDistance(body.radiusMeters)}</strong></div>
@@ -38,6 +53,8 @@ export function PlanetViewControls({
     <p className="subtle planet-view-hint">
       Globes have actual angular scale in 3D. System Map icons remain schematic.
       Select <strong>Planet / orbital</strong> camera for a dedicated world-facing view.
+      At 4× or greater this becomes a telescope feed, hiding the local ship and station
+      while preserving every object's true angular scale.
     </p>
   </div>;
 }
