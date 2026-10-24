@@ -38,6 +38,11 @@ export const HelmCommandSchema = z.discriminatedUnion("type", [
 export type HelmCommand = z.infer<typeof HelmCommandSchema>;
 
 export type GameSnapshot = {
+  universe: {
+    systemId: string;
+    epochSeconds: number;
+    referenceBodyId: string;
+  };
   tick: number;
   serverTime: number;
   ship: ShipState;
