@@ -17,6 +17,7 @@ let narration = "Audio inactive";
 
 function cancelSequence(): void {
   currentSequence++;
+  engine.cancelCues();
   for (const id of scheduled) window.clearTimeout(id);
   scheduled = [];
 }
@@ -65,6 +66,9 @@ byId<HTMLButtonElement>("local-thrust").addEventListener("click", () => {
   cancelSequence();
   describe("local", "LOCAL / Main propulsion responding to acceleration.");
   engine.cue("thruster");
+  // Five-second demo, then a clear quiet coast to compare the two.
+  schedule(2600, () => engine.cue("thruster"));
+  schedule(5000, () => describe("standby", "COAST / Thrusters off. Ship remains in motion without a speed-based engine roar."));
 });
 byId<HTMLButtonElement>("local-coast").addEventListener("click", () => {
   cancelSequence();
@@ -72,34 +76,45 @@ byId<HTMLButtonElement>("local-coast").addEventListener("click", () => {
 });
 byId<HTMLButtonElement>("ftl-engage").addEventListener("click", () => {
   cancelSequence();
-  describe("ftl-spool", "FTL / Charging drive coils for four seconds.");
+  describe("ftl-spool", "FTL / Vintage flash-capacitor charge, four seconds before glass fracture.");
   engine.cue("ftl-charge");
   schedule(4000, () => {
-    describe("ftl-cruise", "FTL / Harmonic cruise field engaged.");
+    describe("ftl-cruise", "FTL / Glass fractured. Discordant field active for ten seconds.");
     engine.cue("ftl-engage");
+    schedule(10000, () => dropToLocal());
   });
 });
-byId<HTMLButtonElement>("ftl-drop").addEventListener("click", () => {
+function dropToLocal(): void {
   cancelSequence();
   engine.cue("ftl-drop");
-  describe("standby", "FTL / Field decaying; preparing to return to local flight.");
-  schedule(1050, () => describe("local", "LOCAL / Drive field released."));
-});
+  describe("standby", "FTL / Dissonant field collapsing; returning to local space.");
+  schedule(1150, () => describe("local", "LOCAL / Field released."));
+}
+byId<HTMLButtonElement>("ftl-drop").addEventListener("click", dropToLocal);
 byId<HTMLButtonElement>("jump-engage").addEventListener("click", () => {
   cancelSequence();
-  describe("jump-charge", "JUMP / Corridor charge, six seconds.");
+  describe("jump-charge", "JUMP / Building six-second charge towards a thunderclap.");
   engine.cue("jump-charge");
   schedule(6000, () => {
-    describe("jump-transit", "JUMP / Interstellar corridor. Evolve the texture, then choose Preview Arrival.");
+    describe("jump-transit", "JUMP / Thunder at the corridor gate. Eerie bed with fast spatial pass-bys.");
     engine.cue("jump-engage");
+    // Explicit semi-irregular traffic rhythm, allowing listening to the
+    // pass-bys in clusters and gaps instead of a robotic metronome.
+    for (const ms of [900, 3150, 4870, 7430, 9040, 11920, 13340]) {
+      schedule(ms, () => {
+        if (engine.state.scene === "jump-transit") engine.cue("passby");
+      });
+    }
+    schedule(15000, () => arriveAtDestination());
   });
 });
-byId<HTMLButtonElement>("jump-arrive").addEventListener("click", () => {
+function arriveAtDestination(): void {
   cancelSequence();
   engine.cue("jump-arrive");
-  describe("standby", "ARRIVAL / Harmonic release and local-space settling.");
-  schedule(1900, () => describe("local", "LOCAL / Destination reached, local propulsion ready."));
-});
+  describe("standby", "ARRIVAL / Thunder rolls along the collapsing corridor. Local space restored.");
+  schedule(3100, () => describe("local", "LOCAL / Destination reached; thrusters standing by."));
+}
+byId<HTMLButtonElement>("jump-arrive").addEventListener("click", arriveAtDestination);
 
 for (const key of ["master", "intensity", "texture", "evolution"] as const) {
   const slider = byId<HTMLInputElement>(key);
