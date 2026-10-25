@@ -147,6 +147,12 @@ try {
   await page.getByText("Connected · Main Screen").waitFor({ timeout: 15_000 });
   await page.getByRole("region", { name: "Interstellar travel telemetry" })
     .getByRole("progressbar", { name: "Interstellar transit progress" }).waitFor({ timeout: 8_000 });
+  const banner = page.getByRole("region", { name: "Shared interstellar journey status" });
+  await banner.getByText("Vesper").waitFor({ timeout: 8_000 });
+  await banner.getByRole("progressbar", {
+    name: "Main Screen interstellar transit progress"
+  }).waitFor();
+  assert.equal(await banner.isVisible(), true, "Jump telemetry must remain visible without sidebar scrolling");
   await page.screenshot({ path: join(artifactDir, "galactic-main-screen-in-transit.png"), fullPage: true });
   assert.ok(observerSnapshot.interstellar.progress >= 0 &&
     observerSnapshot.interstellar.progress <= 1);
