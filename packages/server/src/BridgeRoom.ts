@@ -53,6 +53,7 @@ export class BridgeRoom extends Room {
   private tick = 0;
   private starSystem = getStarSystem(process.env.BRIDGE_SYSTEM_ID ?? DEFAULT_SYSTEM_ID);
   private readonly startUnixSeconds = initialUniverseEpochSeconds();
+  private universeElapsedSeconds = 0;
   private frame: LocalFrame = {
     referenceBodyId: this.starSystem.start.referenceBodyId,
     offsetFromReferenceMeters: { ...this.starSystem.start.offsetFromReferenceMeters }
@@ -66,7 +67,9 @@ export class BridgeRoom extends Room {
   private previousWallTickMs = performance.now();
 
   private get epochSeconds(): number {
-    return this.startUnixSeconds + this.tick * TICK_SECONDS;
+    // Stable, monotonic astronomical epoch even when a busy event loop runs
+    // fewer than the nominal 30 simulation ticks per wall-clock second.
+    return this.startUnixSeconds + this.universeElapsedSeconds;
   }
 
   private snapshot(): GameSnapshot {
@@ -157,6 +160,7 @@ export class BridgeRoom extends Room {
       const interstellarElapsedSeconds = Math.max(0,
         (wallNowMs - this.previousWallTickMs) / 1000);
       this.previousWallTickMs = wallNowMs;
+      this.universeElapsedSeconds += interstellarElapsedSeconds;
       this.tick += 1;
       let arrived = false;
       if (this.interstellar.phase === "idle") {
