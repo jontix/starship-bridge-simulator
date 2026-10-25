@@ -64,9 +64,9 @@
   <a class="back" href="/">← Return to Bridge</a>
 </header>
 <main>
-  <span class="eyebrow">Prototype 01 · Sound Lab · Experimental</span>
+  <span class="eyebrow">Prototype 02 · Cinematic Auditions · Experimental</span>
   <h1>Three drives.<br/><em>One starship.</em></h1>
-  <p class="lede">Audition the sound of the ship from inside the bridge. Local impulse is machinery, interplanetary FTL is controlled field energy, and interstellar transit is an extraordinary shift in reality. No live propulsion behaviour is changed here.</p>
+  <p class="lede">Three short listening scenes, inspired by physical sounds: heavy thrusters, an old camera-flash capacitor and shattering glass, and a thunderous jump corridor filled with racing Doppler pass-bys. This lab never controls the live ship.</p>
 
   <section class="notice" aria-label="Audio playback controls">
     <span class="lamp" aria-hidden="true"></span>
@@ -80,8 +80,8 @@
       <span class="number">01 / IMPULSE</span>
       <h2>Local Propulsion</h2>
       <span class="motif">THE MACHINE</span>
-      <p>A warm hull-reactor bed, mechanically textured thrust and short manoeuvring impulses. Hear the motor rise with acceleration and settle when the ship coasts.</p>
-      <span class="frequency">55 Hz foundation · low mechanical harmonics</span>
+      <p>A rough, deep thruster roar with an initial hull-shaking whump. Preview five seconds of propulsion, then a quiet coast: no speed-following engine sound.</p>
+      <span class="frequency">42–85 Hz rumbling thrust · 5s sequence</span>
       <div class="buttons">
         <button id="local-thrust" data-needs-audio disabled>Preview Thrust</button>
         <button id="local-coast" class="secondary" data-needs-audio disabled>Coast / Quiet</button>
@@ -91,8 +91,8 @@
       <span class="number">02 / INTERPLANETARY</span>
       <h2>FTL Cruise</h2>
       <span class="motif">THE FIELD</span>
-      <p>Four seconds of clean electromagnetic charging resolving into a smooth harmonic field. Brightness follows drive intensity, not loudness.</p>
-      <span class="frequency">110 · 165 · 220 Hz · harmonic shimmer</span>
+      <p>The rising whine of an old flash capacitor charges for four seconds, then a shattering-glass crack fractures into ten seconds of unsettling, discordant field noise.</p>
+      <span class="frequency">Capacitor 690 → 4100 Hz · glass shards · beating field</span>
       <div class="buttons">
         <button id="ftl-engage" data-needs-audio disabled>Spool + Engage</button>
         <button id="ftl-drop" class="secondary" data-needs-audio disabled>Drop to Local</button>
@@ -102,8 +102,8 @@
       <span class="number">03 / INTERSTELLAR</span>
       <h2>Jump Drive</h2>
       <span class="motif">THE CORRIDOR</span>
-      <p>Six seconds of rising tension, a signature engagement impact, and a spacious evolving 45-second transit atmosphere. Arrival resolves gently.</p>
-      <span class="frequency">55 · 82.5 · 110 Hz · spectral motion</span>
+      <p>Six seconds of charge, then violent thunder opens a dark corridor. High-speed vehicles rush past in irregular stereo bursts over an eerie, rattling undertone; a second thunderclap closes it.</p>
+      <span class="frequency">6s charge + 15s corridor + thunderous arrival</span>
       <div class="buttons">
         <button id="jump-engage" data-needs-audio disabled>Charge + Enter</button>
         <button id="jump-arrive" class="secondary" data-needs-audio disabled>Preview Arrival</button>
@@ -113,7 +113,7 @@
 
   <section class="mix" aria-label="Sound mixing desk">
     <div class="mixhead">
-      <div><h2>Sound shaping desk</h2><p>Changes are live. All output remains under a master limiter.</p></div>
+      <div><h2>Sound shaping desk</h2><p>Live shaping of original sample-shaped synthesis. Built-in compression, no autoplay.</p></div>
       <span id="now-playing" aria-live="polite">Standby</span>
     </div>
     <div class="spectrum" aria-hidden="true">
@@ -128,12 +128,12 @@
     </div>
     <div class="knobs">
       <div class="knob"><label for="master">Master level <output id="master-value">38%</output></label><input id="master" type="range" min="0" max="100" value="38"/></div>
-      <div class="knob"><label for="intensity">Drive intensity <output id="intensity-value">55%</output></label><input id="intensity" type="range" min="0" max="100" value="55"/></div>
-      <div class="knob"><label for="texture">Mechanical / field texture <output id="texture-value">35%</output></label><input id="texture" type="range" min="0" max="100" value="35"/></div>
-      <div class="knob"><label for="evolution">Jump harmonic evolution <output id="evolution-value">30%</output></label><input id="evolution" type="range" min="0" max="100" value="30"/></div>
+      <div class="knob"><label for="intensity">Engine / field strength <output id="intensity-value">55%</output></label><input id="intensity" type="range" min="0" max="100" value="55"/></div>
+      <div class="knob"><label for="texture">Turbulence / shards <output id="texture-value">35%</output></label><input id="texture" type="range" min="0" max="100" value="35"/></div>
+      <div class="knob"><label for="evolution">Corridor unease <output id="evolution-value">30%</output></label><input id="evolution" type="range" min="0" max="100" value="30"/></div>
     </div>
   </section>
-  <p class="footnote">Headphones recommended at a low listening level. This is original procedural synthesis using the Web Audio API—no third-party recordings, no background autoplay, no server connectivity and no gameplay commands. Spool previews use actual 4-second and 6-second durations; transit can be auditioned indefinitely without waiting 45 seconds.</p>
+  <p class="footnote">Start with a low speaker volume: thunder and shattering sounds are deliberately dramatic. Effects are original, browser-generated sample-shaped sound-design mock-ups, not finished location recordings. They have no licensing dependencies, no autoplay and no multiplayer connection. The FTL audition runs 4s charge + 10s cruise; the jump audition runs 6s charge + 15s corridor, followed by arrival. You can interrupt any sequence with its exit control or Mute / Stop.</p>
 </main>
 <script type="module" src="/src/soundLab.ts"></script>
 </body>
