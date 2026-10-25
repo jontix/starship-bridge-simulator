@@ -179,7 +179,7 @@ try {
   // Helm v2 real-server acceptance: the 3D space view stays interactive
   // under a full-width bridge workstation. All orders use the existing
   // Colyseus helm_command wire protocol, NOT mocked browser state.
-  await page.getByLabel("Station").selectOption("helm");
+  await page.locator("header .role-select select").selectOption("helm");
   await page.getByText("Connected · Helm").waitFor({timeout:30_000});
   await page.getByRole("region",{name:"Helm workstation"}).waitFor({timeout:20_000});
   await page.getByRole("slider",{name:"Select world bearing"}).waitFor();
