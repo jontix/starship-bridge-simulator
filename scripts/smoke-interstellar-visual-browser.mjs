@@ -85,7 +85,7 @@ try {
   page.on("pageerror", error => errors.push(String(error)));
   page.on("console", message => {
     if (message.type() === "error" ||
-        /shader compilation|unable to compile|failed to compile effect/i.test(message.text())) {
+        /shader compilation|unable to compile|failed to compile effect|same key|non-unique keys/i.test(message.text())) {
       errors.push(message.text());
     }
   });
