@@ -183,6 +183,9 @@ try {
   await page.getByText("Connected · Helm").waitFor({timeout:30_000});
   await page.getByRole("region",{name:"Helm workstation"}).waitFor({timeout:20_000});
   await page.getByRole("slider",{name:"Select world bearing"}).waitFor();
+  await page.getByRole("button",{name:"NAV AIDS OFF"}).waitFor({
+    timeout:10000
+  }); // The 2.8km world grid must not obscure Helm's heading sphere by default.
   await page.getByRole("button",{name:/ENGAGE HEADING/}).waitFor();
   await page.getByRole("button",{name:/EMERGENCY BRAKE/}).waitFor();
 
