@@ -230,8 +230,16 @@ export function HelmPanel({
           </div>
           <div className="helm-view-controls">
             <button className={mode === "orbit" && showSphere ? "selected" : ""}
-              onClick={() => { setMode("orbit"); if (!showSphere) toggleSphere(); }}
-              title="Show interactive heading sphere in the main viewport">3D HEADING</button>
+              aria-pressed={mode === "orbit" && showSphere}
+              onClick={() => {
+                if (mode !== "orbit") {
+                  setMode("orbit");
+                  if (!showSphere) toggleSphere();
+                } else toggleSphere();
+              }}
+              title="Toggle interactive 3D heading sphere in the main viewport">
+              3D HEADING {showSphere && mode === "orbit" ? "ON" : "OFF"}
+            </button>
             <button className={showAids ? "selected" : ""} aria-pressed={showAids}
               onClick={toggleAids}>NAV AIDS {showAids ? "ON" : "OFF"}</button>
           </div>
