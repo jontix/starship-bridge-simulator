@@ -7,7 +7,7 @@ of Artemis, with six-degrees-of-freedom navigation and an authoritative multipla
 
 On `feature/starship-audio-v1`, the standalone **[Sound Lab](http://localhost:5173/sound-lab.html)** lets you audition three revised cinematic propulsion palettes: deep rumbling local thrusters; an old camera-flash capacitor charge, glass-like fracture and discordant FTL field; and a thunderous jump corridor with fast irregular Doppler pass-bys over an eerie background. Enable audio with a click, compare the sounds, adjust four mixing controls, and trigger engagement, dropout and arrival effects. The live bridge remains silent and unchanged.
 
-Launch with `npm.cmd run dev` (Windows) or `npm run dev` after installing dependencies, then open `/sound-lab.html`. See [sound palette and listening checklist](docs/starship-audio-v1.md). Work stays in draft until the audio is approved by ear.
+First run `npm.cmd run audio:fetch` to download the four licensed real-world CC0/public-domain audio clips, then `npm.cmd run dev` (Windows) or `npm run dev`; open `/sound-lab.html`. The status line confirms which recordings loaded. A real old-camera flash recording is optional and requires a separate CC0 download. See [recordings and licence manifest](docs/recorded-audio-sources.md) and [sound palette and listening checklist](docs/starship-audio-v1.md). Work stays in draft until the audio is approved by ear.
 
 ## Current prototype: Flight Model v1
 
