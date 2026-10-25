@@ -66,7 +66,7 @@ export function InterstellarStatusBanner({ snapshot }: { snapshot: GameSnapshot 
         <span style={{ width: progress + "%" }}/>
       </div>
     </> : <p>Jump charge remaining: {jumpEta(jump.spoolRemainingSeconds)}</p>}
-    <small>Shared bridge telemetry · destination visuals follow in Stage D</small>
+    <small>Live bridge telemetry · destination scene rebuilds on arrival</small>
   </section>;
 }
 
