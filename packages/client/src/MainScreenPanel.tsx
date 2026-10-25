@@ -1,6 +1,7 @@
 import { length, type GameSnapshot } from "@bridge-sim/shared";
 import type { CameraMode } from "./scene";
 import { CruiseReadout } from "./CruisePanel";
+import { InterstellarReadout } from "./InterstellarPanel";
 import { PlanetViewControls } from "./PlanetReadout";
 import type { SurfaceDetailMode } from "./surfaceDetail";
 import { BeaconList, CameraSelector, driftAngle, number, Telemetry } from "./navigationUI";
@@ -30,12 +31,15 @@ export function MainScreenPanel({
         opticalZoom={opticalZoom}
         setOpticalZoom={zoom => { setOpticalZoom(zoom); setMode("planet"); }}
         surfaceDetailMode={surfaceDetailMode} setSurfaceDetailMode={setSurfaceDetailMode}/>
+      <h3>Interstellar navigation · read only</h3>
+      <InterstellarReadout snapshot={snapshot}/>
       <CruiseReadout snapshot={snapshot}/>
       <button className={showAids ? "active" : ""} aria-pressed={showAids} onClick={toggleAids}>
         {showAids ? "Hide navigation overlays" : "Show navigation overlays"}
       </button>
       <div className="telemetry-grid">
-        <Telemetry label="World speed" value={ship && snapshot?.cruise.mode === "local" ? number(length(ship.velocity)) + " m/s" : "CRUISE"} />
+        <Telemetry label="World speed" value={snapshot?.interstellar.phase !== "idle" ? "JUMP DRIVE" :
+          ship && snapshot?.cruise.mode === "local" ? number(length(ship.velocity)) + " m/s" : "CRUISE"} />
         <Telemetry label="Drift angle" value={ship ? driftAngle(ship) : "—"} />
       </div>
       <h3>Training beacons</h3>
