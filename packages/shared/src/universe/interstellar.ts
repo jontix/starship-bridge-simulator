@@ -24,6 +24,7 @@ export type InterstellarState = {
   distanceLightYears: number | null;
   spoolRemainingSeconds: number;
   transitRemainingSeconds: number;
+  transitTotalSeconds: number;
   etaSeconds: number | null;
   progress: number; // Server-owned transit progress, 0..1.
   lastArrivalSystemId: string | null;
@@ -58,6 +59,7 @@ export function createInterstellarState(): InterstellarState {
     distanceLightYears: null,
     spoolRemainingSeconds: 0,
     transitRemainingSeconds: 0,
+    transitTotalSeconds: 0,
     etaSeconds: null,
     progress: 0,
     lastArrivalSystemId: null,
@@ -109,6 +111,7 @@ export function plotInterstellarTarget(
     progress: 0,
     spoolRemainingSeconds: 0,
     transitRemainingSeconds: 0,
+    transitTotalSeconds: 0,
     etaSeconds: null,
     lastArrivalSystemId: null
   }, notice);
@@ -138,6 +141,7 @@ export function engageInterstellarJump(
     distanceLightYears: route.distance,
     spoolRemainingSeconds: timings.spoolSeconds,
     transitRemainingSeconds: timings.transitSeconds,
+    transitTotalSeconds: timings.transitSeconds,
     etaSeconds: timings.spoolSeconds + timings.transitSeconds,
     progress: 0
   }, notice);
@@ -183,10 +187,8 @@ export function stepInterstellar(state: InterstellarState, dt: number): Interste
       { state: { ...activated, etaSeconds: activated.transitRemainingSeconds }, arrivalSystemId: null };
   }
   const remaining = Math.max(0, state.transitRemainingSeconds - dt);
-  const original = state.transitRemainingSeconds <= 0 ? 1 :
-    state.transitRemainingSeconds / Math.max(0.000001, 1 - state.progress);
   const progress = remaining <= 0 ? 1 : Math.max(state.progress,
-    Math.min(1, 1 - remaining / original));
+    Math.min(1, 1 - remaining / state.transitTotalSeconds));
   const updated: InterstellarState = {
     ...state, transitRemainingSeconds: remaining, progress, etaSeconds: remaining
   };
