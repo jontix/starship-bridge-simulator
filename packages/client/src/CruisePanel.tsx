@@ -48,8 +48,8 @@ export function CruisePanel({
   useEffect(() => {
     if (cruise?.targetId) setSelectedId(cruise.targetId);
   }, [cruise?.targetId]);
-  const cruising = cruise?.mode !== "local";
-  const canControl = Boolean(room && snapshot);
+  const cruising = cruise?.mode !== "local" || snapshot?.interstellar.phase !== "idle";
+  const canControl = Boolean(room && snapshot && !cruising);
   const send = (command: unknown) => room?.send("cruise_command", command);
   return (
     <section className="cruise-panel" aria-label="Interplanetary cruise navigation">
