@@ -12,7 +12,7 @@ import { BeaconList, CameraSelector } from "./navigationUI";
 import {
   AxisStepper, ConvergenceBar, FlightMotionGlyph,
   HeadingDial, ModuleHeader, StatusMetric
-} from "./HelmInstruments";
+} from "./HelmWidgets";
 import {
   bearingDistance, clampHelmSpeed, clampHelmTranslation,
   currentHeadingFromShip, headingErrorDegrees,
