@@ -10,6 +10,7 @@ import { MainScreenPanel } from "./MainScreenPanel";
 import { SystemMap } from "./SystemMap";
 import { GalacticMap } from "./GalacticMap";
 import { CruiseStatusBanner } from "./CruisePanel";
+import { InterstellarStatusBanner } from "./InterstellarPanel";
 import type { PickedHeading, SelectedHeading } from "./navigationVisuals";
 import "./styles.css";
 import "./helmStation.css";
@@ -280,6 +281,7 @@ function App() {
           </div>
         )}
         {role !== "helm" && <CruiseStatusBanner snapshot={snapshot}/>}
+        {role !== "helm" && <InterstellarStatusBanner snapshot={snapshot}/>}
         <div className="scene-caption">
           {liveSystem.name.toUpperCase()} · {snapshot?.interstellar.phase && snapshot.interstellar.phase !== "idle" ? "INTERSTELLAR" :
             snapshot?.cruise.mode === "local" ? "LOCAL" : "INTERPLANETARY"} ·
