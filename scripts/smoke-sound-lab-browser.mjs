@@ -49,6 +49,13 @@ try {
   await page.getByRole("heading", { name: /Three drives/ }).waitFor();
   await page.waitForFunction(() => !!window.__soundLabDebug);
   const state = () => page.evaluate(() => window.__soundLabDebug.state());
+  const changeSlider = (id, value) => page.locator("#" + id).evaluate(
+    (element, amount) => {
+      element.value = String(amount);
+      element.dispatchEvent(new Event("input", { bubbles: true }));
+    }, value
+  );
+
   const before = await state();
   assert.equal(before.contextState, "not-created",
     "Autoplay must not create an AudioContext before user interaction");
@@ -61,9 +68,9 @@ try {
   assert.equal((await state()).scene, "local");
   await page.getByRole("button", { name: "Preview Thrust" }).click();
   assert.ok((await state()).cuesPlayed >= 1);
-  await page.locator("#intensity").fill("75");
-  await page.locator("#texture").fill("60");
-  await page.locator("#master").fill("25");
+  await changeSlider("intensity", 75);
+  await changeSlider("texture", 60);
+  await changeSlider("master", 25);
   assert.equal((await state()).intensity, 0.75);
   assert.equal((await state()).texture, 0.6);
   assert.equal((await state()).master, 0.25);
@@ -82,7 +89,7 @@ try {
   assert.equal((await state()).scene, "jump-charge");
   await page.waitForFunction(() => window.__soundLabDebug.state().scene === "jump-transit",
     null, { timeout: 9000 });
-  await page.locator("#evolution").fill("82");
+  await changeSlider("evolution", 82);
   assert.equal((await state()).evolution, 0.82);
   await page.screenshot({ path: join(outputDir, "sound-lab-jump-transit.png"), fullPage: true });
   await page.getByRole("button", { name: "Preview Arrival" }).click();
