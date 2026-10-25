@@ -49,7 +49,7 @@ enable.addEventListener("click", async () => {
   try {
     await engine.enable();
     disabledControls(false);
-    describe("local", "Audio enabled. Local propulsion is ready for audition.");
+    describe("standby", "Audio enabled. Thrusters are quiet until you preview thrust.");
   } catch (error) {
     status.textContent = "Could not start audio: " + String(error);
     disabledControls(true);
@@ -88,7 +88,7 @@ function dropToLocal(): void {
   cancelSequence();
   engine.cue("ftl-drop");
   describe("standby", "FTL / Dissonant field collapsing; returning to local space.");
-  schedule(1150, () => describe("local", "LOCAL / Field released."));
+  schedule(1150, () => describe("standby", "LOCAL / Field released. Thrusters are quiet."));
 }
 byId<HTMLButtonElement>("ftl-drop").addEventListener("click", dropToLocal);
 byId<HTMLButtonElement>("jump-engage").addEventListener("click", () => {
@@ -112,7 +112,7 @@ function arriveAtDestination(): void {
   cancelSequence();
   engine.cue("jump-arrive");
   describe("standby", "ARRIVAL / Thunder rolls along the collapsing corridor. Local space restored.");
-  schedule(3100, () => describe("local", "LOCAL / Destination reached; thrusters standing by."));
+  schedule(3100, () => describe("standby", "LOCAL / Destination reached; thrusters standing by."));
 }
 byId<HTMLButtonElement>("jump-arrive").addEventListener("click", arriveAtDestination);
 
