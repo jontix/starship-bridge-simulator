@@ -59,7 +59,8 @@ export class StarshipSoundEngine {
     if (this.context?.state === "running") return;
     if (!this.context) this.createGraph();
     await this.context!.resume(); // Called only after a real user gesture.
-    if (this.scene === "standby") this.scene = "local";
+    // An enabled sound device is not the same as an accelerating ship:
+    // keep propulsion silent until the user previews thrust.
     this.refresh();
   }
 
@@ -198,11 +199,10 @@ export class StarshipSoundEngine {
     const c = this.controls;
     glide(this.master.gain, c.master, now);
     const local = this.scene === "local";
-    const ftl = this.scene === "ftl-spool" || this.scene === "ftl-cruise";
     const jump = this.scene === "jump-charge" || this.scene === "jump-transit";
     const gains: Record<"local" | "ftl" | "jump", number> = {
       local: local ? 0.4 + c.intensity * 0.6 : 0,
-      ftl: ftl ? 0.5 + c.intensity * 0.45 : 0,
+      ftl: this.scene === "ftl-cruise" ? 0.5 + c.intensity * 0.45 : 0,
       jump: jump ? (this.scene === "jump-transit" ? 0.45 + c.intensity * 0.38 : 0.62) : 0
     };
     for (const key of ["local", "ftl", "jump"] as const) {
