@@ -37,6 +37,7 @@ export class StarshipSoundEngine {
     master: 0.38, intensity: 0.55, texture: 0.35, evolution: 0.3
   };
   private cues = 0;
+  private activeCues = new Set<OscillatorNode>();
 
   get state() {
     return {
@@ -45,6 +46,7 @@ export class StarshipSoundEngine {
       scene: this.scene,
       ...this.controls,
       cuesPlayed: this.cues,
+      activeCues: this.activeCues.size,
       activeVoices: this.voices ? Object.entries(this.voices)
         .filter(([, voice]) => voice.bus.gain.value > 0.001)
         .map(([name]) => name) : []
@@ -61,6 +63,12 @@ export class StarshipSoundEngine {
 
   async disable(): Promise<void> {
     if (this.context) {
+      // Remove in-flight sweeps before suspending: otherwise an old jump
+      // charge could continue when the user enables audio again.
+      for (const sound of this.activeCues) {
+        try { sound.stop(); } catch { /* already ended */ }
+      }
+      this.activeCues.clear();
       this.scene = "standby";
       this.refresh();
       await this.context.suspend();
@@ -111,12 +119,20 @@ export class StarshipSoundEngine {
     envelope.gain.exponentialRampToValueAtTime(maxGain, now + Math.min(0.25, duration * 0.3));
     envelope.gain.exponentialRampToValueAtTime(0.0001, now + duration);
     osc.connect(filter).connect(envelope).connect(master);
+    this.activeCues.add(osc);
     osc.start(now);
     osc.stop(now + duration + 0.02);
-    osc.onended = () => { osc.disconnect(); filter.disconnect(); envelope.disconnect(); };
+    osc.onended = () => {
+      this.activeCues.delete(osc);
+      osc.disconnect(); filter.disconnect(); envelope.disconnect();
+    };
   }
 
   async dispose(): Promise<void> {
+    for (const sound of this.activeCues) {
+      try { sound.stop(); } catch { /* already ended */ }
+    }
+    this.activeCues.clear();
     const ctx = this.context;
     this.context = null;
     this.master = null;
