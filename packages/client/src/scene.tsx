@@ -135,6 +135,10 @@ export function MainScene({
       counters.activeSkyBodyIds = [];
     }
     const planetarySky = createPlanetaryBackground(engine);
+    // React may tear down this canvas during a system change or station-role
+    // reconnect while Babylon still has a queued animation-frame callback.
+    // Never render an already disposed sky/scene (postProcessManager is null).
+    let rendererDisposed = false;
     // Sky first, then clear depth (but NOT colour) before rendering local
     // ship/station geometry: a projection proxy planet cannot clip a station.
     scene.autoClear = false;
@@ -238,6 +242,7 @@ export function MainScene({
     }, PointerEventTypes.POINTERPICK);
 
     engine.runRenderLoop(() => {
+      if (rendererDisposed) return;
       const latest = latestRef.current;
       // In deep interstellar transit there is NO valid metre-valued frame or
       // astronomical sightline. Do not show the origin system or reuse a stale
@@ -408,6 +413,7 @@ export function MainScene({
     const resize = () => engine.resize();
     window.addEventListener("resize", resize);
     return () => {
+      rendererDisposed = true; // Invalidate queued callbacks before GPU teardown.
       window.removeEventListener("resize", resize);
       engine.stopRenderLoop();
       if (pickObserver) scene.onPointerObservable.remove(pickObserver);
