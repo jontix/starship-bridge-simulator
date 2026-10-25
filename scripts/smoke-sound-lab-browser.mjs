@@ -65,8 +65,10 @@ try {
 
   await page.getByRole("button", { name: "Enable Audio" }).click();
   await page.waitForFunction(() => window.__soundLabDebug.state().enabled);
-  assert.equal((await state()).scene, "local");
+  assert.equal((await state()).scene, "standby");
   await page.getByRole("button", { name: "Preview Thrust" }).click();
+  assert.equal((await state()).scene, "local",
+    "Active thrust is the only scenario that should rumble");
   assert.ok((await state()).cuesPlayed >= 1);
   await changeSlider("intensity", 75);
   await changeSlider("texture", 60);
@@ -82,7 +84,7 @@ try {
   await page.waitForFunction(() => window.__soundLabDebug.state().scene === "ftl-cruise",
     null, { timeout: 6500 });
   await page.getByRole("button", { name: "Drop to Local" }).click();
-  await page.waitForFunction(() => window.__soundLabDebug.state().scene === "local",
+  await page.waitForFunction(() => window.__soundLabDebug.state().scene === "standby",
     null, { timeout: 4000 });
 
   await page.getByRole("button", { name: "Charge + Enter" }).click();
@@ -98,7 +100,7 @@ try {
   await page.screenshot({ path: join(outputDir, "sound-lab-jump-transit.png"), fullPage: true });
   await page.getByRole("button", { name: "Preview Arrival" }).click();
   assert.equal((await state()).scene, "standby");
-  await page.waitForFunction(() => window.__soundLabDebug.state().scene === "local",
+  await page.waitForFunction(() => window.__soundLabDebug.state().scene === "standby",
     null, { timeout: 3500 });
   assert.ok((await state()).cuesPlayed >= 6);
 
@@ -108,7 +110,7 @@ try {
   await page.getByRole("button", { name: "Charge + Enter" }).click();
   await page.waitForFunction(() => window.__soundLabDebug.state().scene === "jump-transit",
     null, { timeout: 9000 });
-  await page.waitForFunction(() => window.__soundLabDebug.state().scene === "local",
+  await page.waitForFunction(() => window.__soundLabDebug.state().scene === "standby",
     null, { timeout: 22000 });
   assert.ok((await state()).passBys >= passesBefore + 7,
     "Seven irregular stereo pass-bys should play before automatic arrival");
@@ -129,7 +131,7 @@ try {
   await page.getByRole("button", { name: "Enable Audio" }).click();
   await page.waitForFunction(() => window.__soundLabDebug.state().enabled,
     null, { timeout: 5000 });
-  assert.equal((await state()).scene, "local");
+  assert.equal((await state()).scene, "standby");
   assert.deepEqual(exceptions, [], "Browser exceptions: " + exceptions.join("\n"));
   console.log("Starship Sound Lab Chromium PASS: no autoplay; Web Audio; rumble, capacitor/glass FTL, thunder with 7 irregular Doppler pass-bys and auto-arrival; 4s/6s spool; mix, mute/reset");
   await context.close();
