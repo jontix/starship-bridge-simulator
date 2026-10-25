@@ -64,7 +64,12 @@ try {
   await page.screenshot({ path: join(outputDir, "sound-lab-standby.png"), fullPage: true });
 
   await page.getByRole("button", { name: "Enable Audio" }).click();
-  await page.waitForFunction(() => window.__soundLabDebug.state().enabled);
+  // AudioContext resumes before fetch/decodeAudioData resolves, so wait
+  // for the button handler and all source buffers rather than racing resume.
+  await page.waitForFunction(() => window.__soundLabDebug.state().enabled &&
+    window.__soundLabDebug.state().recordings.ready.length >= 4,
+    null, { timeout: 12_000 });
+  await page.getByRole("button", { name: "Preview Thrust" }).waitFor({ state: "visible" });
   for (const required of ["rumble", "glass", "car", "thunder"]) {
     assert.ok((await state()).recordings.ready.includes(required),
       "Real licensed recorded audio must decode in Chromium: missing " + required);
