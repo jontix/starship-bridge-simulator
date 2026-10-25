@@ -52,7 +52,7 @@ try {
     PORT: "2567",
     BRIDGE_SYSTEM_ID: "aster-reach",
     BRIDGE_TEST_START_EPOCH_SECONDS: String(Date.UTC(2026, 9, 24, 20) / 1000),
-    BRIDGE_TEST_JUMP_TIME_SCALE: "0.45"
+    BRIDGE_TEST_JUMP_TIME_SCALE: "0.75"
   });
   start("npm", ["--prefix", "packages/client", "run", "dev", "--",
     "--host", "127.0.0.1", "--port", "5173", "--strictPort"], "Vite");
