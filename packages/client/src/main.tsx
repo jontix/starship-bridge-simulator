@@ -8,10 +8,12 @@ import type { SurfaceDetailMode } from "./surfaceDetail";
 import { HelmPanel } from "./HelmPanel";
 import { MainScreenPanel } from "./MainScreenPanel";
 import { SystemMap } from "./SystemMap";
+import { GalacticMap } from "./GalacticMap";
 import { CruiseStatusBanner } from "./CruisePanel";
 import type { PickedHeading, SelectedHeading } from "./navigationVisuals";
 import "./styles.css";
 import "./helmStation.css";
+import "./galacticNavigation.css";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL ?? `ws://${window.location.hostname}:2567`;
 
@@ -25,8 +27,10 @@ function App() {
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [status, setStatus] = useState("Connecting...");
   const [cruiseNotice, setCruiseNotice] = useState("");
+  const [interstellarNotice, setInterstellarNotice] = useState("");
   const [showHeadingSphere, setShowHeadingSphere] = useState(false);
   const [showSystemMap, setShowSystemMap] = useState(false);
+  const [showGalacticMap, setShowGalacticMap] = useState(false);
   const [showNavigationAids, setShowNavigationAids] = useState(true);
   const [selectedHeading, setSelectedHeading] = useState<SelectedHeading>({ yaw: 0, pitch: 0, roll: 0 });
 
@@ -40,7 +44,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (role !== "helm" || showSystemMap) return;
+    if (role !== "helm" || showSystemMap || showGalacticMap) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() !== "h" || event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
       const focused = event.target;
@@ -50,16 +54,30 @@ function App() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [role, showSystemMap]);
+  }, [role, showSystemMap, showGalacticMap]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") { setShowSystemMap(false); return; }
+      if (event.key === "Escape") { setShowSystemMap(false); setShowGalacticMap(false); return; }
       if (event.key.toLowerCase() !== "m" || event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
       const focused = event.target;
       if (focused instanceof HTMLElement && focused.closest("input,select,textarea,[contenteditable='true']")) return;
       event.preventDefault();
       setShowSystemMap(value => !value);
+      setShowGalacticMap(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== "g" || event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
+      const focused = event.target;
+      if (focused instanceof HTMLElement && focused.closest("input,select,textarea,[contenteditable='true']")) return;
+      event.preventDefault();
+      setShowSystemMap(false);
+      setShowGalacticMap(value => !value);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -79,6 +97,7 @@ function App() {
     setRoom(null);
     setSnapshot(null);
     setCruiseNotice("");
+    setInterstellarNotice("");
     const client = new Client(serverUrl);
 
     const retry = () => {
@@ -101,6 +120,9 @@ function App() {
         setStatus(`Connected · ${role === "helm" ? "Helm" : "Main Screen"}`);
         newRoom.onMessage("cruise_notice", (message: string) => {
           if (alive) setCruiseNotice(message);
+        });
+        newRoom.onMessage("interstellar_notice", (message: string) => {
+          if (alive) setInterstellarNotice(message);
         });
         newRoom.onMessage("snapshot", (message: GameSnapshot) => {
           if (alive) setSnapshot(message);
@@ -142,6 +164,11 @@ function App() {
           <span className="system-map-toggle-label">☉ {liveSystem.name}</span>
           <span className="system-map-toggle-action">System Map <kbd>M</kbd></span>
         </button>
+        <button className={showGalacticMap ? "galactic-map-toggle active" : "galactic-map-toggle"}
+          onClick={() => { setShowSystemMap(false); setShowGalacticMap(value => !value); }}
+          aria-expanded={showGalacticMap} title="Open the interstellar Galactic Navigation chart">
+          GALACTIC MAP <kbd>G</kbd>
+        </button>
         <a className="planet-lab-toplink" href="/planet-lab.html"
           title="Develop and inspect deterministic planetary surface maps">
           <span aria-hidden="true">◉ </span>Planet Lab
@@ -150,6 +177,8 @@ function App() {
           Station
           <select value={role} onChange={(event) => {
             const nextRole = event.target.value as PlayerRole;
+            setShowSystemMap(false);
+            setShowGalacticMap(false);
             setRole(nextRole);
             // Helm opens at a flyable navigation orientation, not the orbital
             // panorama used by the Main Screen. The 3D heading sphere is live.
@@ -174,7 +203,7 @@ function App() {
         <MainScene
           snapshot={snapshot}
           mode={cameraMode}
-          showHeadingSphere={role === "helm" && showHeadingSphere && snapshot?.cruise.mode === "local"}
+          showHeadingSphere={role === "helm" && showHeadingSphere && snapshot?.cruise.mode === "local" && snapshot.interstellar.phase === "idle"}
           showNavigationAids={showNavigationAids}
           selectedHeading={selectedHeading}
           onHeadingPicked={pickHeading}
@@ -187,6 +216,8 @@ function App() {
             room={room}
             snapshot={snapshot}
             cruiseNotice={cruiseNotice}
+            interstellarNotice={interstellarNotice}
+            openGalacticMap={() => { setShowSystemMap(false); setShowGalacticMap(true); }}
             heading={selectedHeading}
             setHeading={setSelectedHeading}
             showSphere={showHeadingSphere}
@@ -248,9 +279,20 @@ function App() {
         )}
         {role !== "helm" && <CruiseStatusBanner snapshot={snapshot}/>}
         <div className="scene-caption">
-          {liveSystem.name.toUpperCase()} · {snapshot?.cruise.mode === "local" ? "LOCAL" : "INTERPLANETARY"} ·
+          {liveSystem.name.toUpperCase()} · {snapshot?.interstellar.phase !== "idle" ? "INTERSTELLAR" :
+            snapshot?.cruise.mode === "local" ? "LOCAL" : "INTERPLANETARY"} ·
           FRAME: {(snapshot?.universe.referenceBodyId ?? liveSystem.start.referenceBodyId).toUpperCase()} · 30 HZ
         </div>
+        {showGalacticMap && <GalacticMap
+          snapshot={snapshot}
+          canCommand={role === "helm" && Boolean(room)}
+          onClose={() => setShowGalacticMap(false)}
+          onShowJumpControls={() => setShowGalacticMap(false)}
+          onPlot={systemId => {
+            if (role === "helm" && room) room.send("interstellar_command", {
+              type: "set_interstellar_target", systemId
+            });
+          }}/>}
         {showSystemMap && <SystemMap
           snapshot={snapshot}
           onClose={() => setShowSystemMap(false)}
