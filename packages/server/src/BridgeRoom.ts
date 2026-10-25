@@ -48,6 +48,11 @@ function initialUniverseEpochSeconds(): number {
 
 export class BridgeRoom extends Room {
   maxClients = 8;
+  // One shared bridge is an ongoing voyage, not a per-browser session. When
+  // the last station leaves (reload, laptop sleep, or changing stations),
+  // keep its current star system and ship rather than creating Aster Reach
+  // anew on the next join. Restarting the server remains a fresh voyage.
+  autoDispose = false;
   private ship: ShipState = createInitialShipState();
   private roles = new Map<string, PlayerRole>();
   private tick = 0;
@@ -192,6 +197,23 @@ export class BridgeRoom extends Room {
       }
       if (arrived || this.tick % 2 === 0) this.broadcast("snapshot", this.snapshot());
     }, TICK_SECONDS * 1000);
+
+    this.onMessage("station_role", (client, payload: unknown) => {
+      // Switching Helm <-> Main Screen changes only this client's capability.
+      // Never make the browser leave/recreate the authoritative ship room.
+      const parsed = RoleSchema.safeParse(
+        payload !== null && typeof payload === "object" && "role" in payload
+          ? (payload as { role: unknown }).role : undefined
+      );
+      if (!parsed.success) {
+        client.send("station_role_notice", "Invalid bridge station");
+        return;
+      }
+      if (!this.roles.has(client.sessionId)) return;
+      this.roles.set(client.sessionId, parsed.data);
+      client.send("station_role_confirmed", { role: parsed.data, roomId: this.roomId });
+      client.send("snapshot", this.snapshot());
+    });
 
     this.onMessage("helm_command", (client, payload: unknown) => {
       if (this.roles.get(client.sessionId) !== "helm") return;
