@@ -27,6 +27,7 @@ type HelmPanelProps = {
   cruiseNotice: string;
   interstellarNotice: string;
   openGalacticMap: () => void;
+  jumpTabRequest: number;
   heading: SelectedHeading;
   setHeading: Dispatch<SetStateAction<SelectedHeading>>;
   showSphere: boolean;
@@ -50,7 +51,7 @@ const ratio = (value: number, maximum: number) =>
   Math.min(100, Math.max(0, Math.abs(value) / maximum * 100)) + "%";
 
 export function HelmPanel({
-  room, snapshot, cruiseNotice, interstellarNotice, openGalacticMap, heading, setHeading,
+  room, snapshot, cruiseNotice, interstellarNotice, openGalacticMap, jumpTabRequest, heading, setHeading,
   showSphere, toggleSphere, showAids, toggleAids, mode, setMode,
   planetFocusId, setPlanetFocusId, opticalZoom, setOpticalZoom,
   surfaceDetailMode, setSurfaceDetailMode
@@ -62,6 +63,10 @@ export function HelmPanel({
   const [showDisplay, setShowDisplay] = useState(false);
   const initializedRoom = useRef<Room | null>(null);
   const previousDriveMode = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (jumpTabRequest > 0) setRightTab("jump");
+  }, [jumpTabRequest]);
 
   const ship = snapshot?.ship;
   const cruise = snapshot?.cruise;
