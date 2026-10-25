@@ -2,7 +2,7 @@ name: Planet rendering browser smoke
 
 on:
   push:
-    branches: [main, feature/helm-station-v2, feature/planetary-rendering-v2, feature/procedural-planet-generator-v1, feature/planetary-surface-detail-lod-v1]
+    branches: [main, feature/interstellar-travel-v1, feature/helm-station-v2, feature/planetary-rendering-v2, feature/procedural-planet-generator-v1, feature/planetary-surface-detail-lod-v1]
   workflow_dispatch:
 
 # Rapid visual iteration should not leave dozens of obsolete GPU builds queued.
