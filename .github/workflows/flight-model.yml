@@ -33,6 +33,7 @@ jobs:
       - run: node --import tsx --test packages/client/src/surfaceDetail.test.ts
       - run: node --import tsx --test packages/client/src/helmInstruments.test.ts
       - run: node --import tsx --test packages/client/src/interstellarUI.test.ts
+      - run: node --import tsx --test packages/client/src/systemTransition.test.ts
       - run: node scripts/smoke-server.mjs
       - run: node scripts/smoke-universe.mjs
       - run: node scripts/smoke-universe.mjs vesper
