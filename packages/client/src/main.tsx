@@ -226,18 +226,20 @@ function App() {
         </label>
       </header>
       <main>
-        <MainScene
+        {snapshot ? <MainScene
           key={activeSystemId}
           snapshot={snapshot}
           mode={cameraMode}
-          showHeadingSphere={role === "helm" && showHeadingSphere && snapshot?.cruise.mode === "local" && snapshot.interstellar.phase === "idle"}
+          showHeadingSphere={role === "helm" && showHeadingSphere &&
+            snapshot.cruise.mode === "local" && snapshot.interstellar.phase === "idle"}
           showNavigationAids={showNavigationAids}
           selectedHeading={selectedHeading}
           onHeadingPicked={pickHeading}
           planetFocusId={focusInActiveSystem}
           opticalZoom={opticalZoom}
           surfaceDetailMode={surfaceDetailMode}
-        />
+        /> : <canvas className="scene" aria-label="Awaiting star system link"
+          data-system-id="awaiting-system" />}
         <InterstellarTransition snapshot={snapshot}/>
         {role === "helm" ? (
           <HelmPanel
