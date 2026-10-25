@@ -130,3 +130,27 @@
   .galactic-map-aside {padding:12px;}
   .galactic-map-toggle {padding:8px;}
 }
+
+/* Main Screen playtest: keep important ship data above the fold.
+ * Long optical-training notes remain keyboard-accessible on demand.
+ */
+.main-panel .planet-view-hint {
+  margin: 9px 0 5px;
+  border-top: 1px solid #345d6f;
+  border-bottom: 1px solid #345d6f;
+  padding: 8px 0;
+}
+.main-panel .planet-view-hint summary {
+  cursor: pointer;
+  color: #9ddceb;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+.main-panel .planet-view-hint summary:focus-visible {
+  outline: 2px solid #93edfa;
+  outline-offset: 3px;
+}
+.main-panel .planet-view-hint p {
+  margin: 9px 0 2px;
+}
