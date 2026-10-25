@@ -31,6 +31,7 @@ function App() {
   const [showHeadingSphere, setShowHeadingSphere] = useState(false);
   const [showSystemMap, setShowSystemMap] = useState(false);
   const [showGalacticMap, setShowGalacticMap] = useState(false);
+  const [jumpTabRequest, setJumpTabRequest] = useState(0);
   const [showNavigationAids, setShowNavigationAids] = useState(true);
   const [selectedHeading, setSelectedHeading] = useState<SelectedHeading>({ yaw: 0, pitch: 0, roll: 0 });
 
@@ -158,7 +159,7 @@ function App() {
         <strong>STARSHIP / BRIDGE</strong>
         <span className="connection-status">{status}</span>
         <button className={showSystemMap ? "system-map-toggle active" : "system-map-toggle"}
-          onClick={() => setShowSystemMap(value => !value)}
+          onClick={() => { setShowGalacticMap(false); setShowSystemMap(value => !value); }}
           aria-expanded={showSystemMap}
           title="Open the astronomical system navigation chart">
           <span className="system-map-toggle-label">☉ {liveSystem.name}</span>
@@ -217,6 +218,7 @@ function App() {
             snapshot={snapshot}
             cruiseNotice={cruiseNotice}
             interstellarNotice={interstellarNotice}
+            jumpTabRequest={jumpTabRequest}
             openGalacticMap={() => { setShowSystemMap(false); setShowGalacticMap(true); }}
             heading={selectedHeading}
             setHeading={setSelectedHeading}
@@ -287,7 +289,7 @@ function App() {
           snapshot={snapshot}
           canCommand={role === "helm" && Boolean(room)}
           onClose={() => setShowGalacticMap(false)}
-          onShowJumpControls={() => setShowGalacticMap(false)}
+          onShowJumpControls={() => { setShowGalacticMap(false); setJumpTabRequest(value => value + 1); }}
           onPlot={systemId => {
             if (role === "helm" && room) room.send("interstellar_command", {
               type: "set_interstellar_target", systemId
