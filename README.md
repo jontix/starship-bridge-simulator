@@ -3,6 +3,12 @@
 A cooperative browser-based **3D starship bridge simulator**, inspired by the crew coordination
 of Artemis, with six-degrees-of-freedom navigation and an authoritative multiplayer ship simulation.
 
+## Starship Audio v1 — experimental Sound Lab
+
+On `feature/starship-audio-v1`, the standalone **[Sound Lab](http://localhost:5173/sound-lab.html)** lets you audition three distinct, procedural propulsion palettes: mechanical local thrust, harmonic four-second interplanetary FTL, and a deep six-second charging/interstellar corridor. Enable audio with a click, compare the sounds, adjust four mixing controls, and trigger engagement, dropout and arrival effects. The live bridge remains silent and unchanged.
+
+Launch with `npm.cmd run dev` (Windows) or `npm run dev` after installing dependencies, then open `/sound-lab.html`. See [sound palette and listening checklist](docs/starship-audio-v1.md). Work stays in draft until the audio is approved by ear.
+
 ## Current prototype: Flight Model v1
 
 - TypeScript monorepo with Babylon.js, React and Colyseus
