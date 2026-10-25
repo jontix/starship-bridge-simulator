@@ -49,9 +49,9 @@ Stage A is implemented and covered by CI.
 - `interstellarUI.test.ts` checks connected destinations, distances, preview/plot readiness, state gating and progress formatting. `smoke-galactic-browser.mjs` launches a real Node/Colyseus server, one Chromium/WebGL client switching between Main Screen and Helm, and a separately connected Colyseus crew observer; checks read-only Main Screen including the always-visible jump banner, interactive Helm chart, preview versus server plot, engagement/cancellation, synchronized charge/transit and screenshots.
 - CI runs the new unit suite on Windows Node 24/Linux Node 22, and the new browser scenario in a dedicated Chromium Galactic Navigation workflow. Passing claims require final workflow confirmation.
 
-**Stage C is the UI and command bridge, NOT the destination-system Babylon renderer handoff.** While the server can jump, the existing scene may retain old-system textures, local trails or pose interpolation on arrival. The controls display a Stage D limitation notice, and the browser smoke stops during transit rather than claiming a rendered Vesper arrival. Do not call the browser transition fully safe until Stage D passes.
+**Stage C established the navigation controls; Stage D subsequently implemented the renderer handoff.** The Stage C-only browser smoke stops in transit; Stage D/E browser smokes verify the real destination visuals and scene disposal.
 
-## Stage D — destination-system rendering and shared jump presentation (implemented, CI pending)
+## Stage D — destination-system rendering and shared jump presentation (implemented; verification in Stage E)
 
 - `systemTransition.ts` defines deterministic client-owned handoff rules: scene keys derive **only** from authoritative `universe.systemId`; interpolation history resets when system, local reference body, local-vs-cruise mode or transit boundary changes. A stale telescope focus from the old catalog immediately maps to `auto` while state resets asynchronously.
 - `main.tsx` keys `MainScene` by the authoritative system ID. **Babylon Engine, both local and planetary Scenes, cameras, lights, navigation trails and planet textures are disposed/re-created at each system change.** Role, station controls, camera selection, display preferences and Colyseus room survive. Optical zoom, target and unsent heading previews reset on arrival.
@@ -65,11 +65,36 @@ Stage A is implemented and covered by CI.
 
 **Game-play limits:** Arrivals are safe navigation anchors (250 km stand-off), not docking. Stage E continues with full connection/reconnect acceptance, camera/manual aesthetics, and user playtest before merging.
 
-## Stage E — acceptance (not implemented)
+## Stage E — production-speed acceptance and visual review (automated implementation complete; human sign-off pending)
 
-- Bidirectional real multiplayer voyage, client reconnection during transit, Helm command restrictions, safe arrival and post-arrival 6DOF/cruise.
-- Windows/Linux tests, Colyseus room smoke and actual Chromium/WebGL tests including multiple returns.
-- Manual game-feel review before any merge.
+### Production-time two-way crew voyage
+- `scripts/smoke-interstellar-production.mjs` starts an actual Colyseus room at the catalog's deterministic ephemeris epoch, **without the accelerated jump-time option**. It measures two real Aster Reach ↔ Vesper legs against the normal **6 s charge / 45 s transit** configuration, in Windows Node 24 and Linux Node 22 CI.
+- The acceptance deliberately **disconnects and reconnects Main Screen during the charging phase**, **disconnects and reconnects Helm during transit**, rejoins Main Screen after arrival and during the return transit, and confirms each new connection uses the **same Colyseus room** and the *ongoing* server phase/ETA rather than restarting the drive.
+- The server's phase snapshots are validated for monotonic epoch, decreasing countdowns, increasing transit progress, current-system stability before arrival, 250 km arrival frame, cleared old cruise orders and restored post-arrival Helm controls. Spoofed Main Screen orders remain rejected after reconnect.
+- First successful full-speed run: [Stage E acceptance 40197179859](https://github.com/jontix/starship-bridge-simulator/actions/runs/40197179859) — **Linux and Windows passed**. Linux measured Aster→Vesper spool **6.00 s**, transit **44.72 s**, and Vesper→Aster spool **5.98 s**, transit **44.79 s**. These are observed wall-clock times, not animation estimates.
+
+### Browser-based UX, reconnection and evidence
+- `scripts/smoke-interstellar-acceptance-browser.mjs` launches the actual Babylon/React bridge in Chromium alongside a separate authoritative crew client, using the real 6/45-second timers. It verifies **Main Screen's read-only Galactic Map**, Helm's explicit **plot → engage**, disabled impulse during charging, six-second spool, spectator mode, live server progress and a **full-page reload during transit**.
+- After browser reload the Main Screen must reconnect, show continuing authoritative transit progress, then load the Vesper renderer with one active Babylon engine and no stale Aster bodies. The acceptance captures three screenshots: Helm charging, Main Screen transit, and Vesper arrival.
+- The first full-speed Chromium test **passed** in [Stage E acceptance 40197179859](https://github.com/jontix/starship-bridge-simulator/actions/runs/40197179859). [Screenshot archive](https://github.com/jontix/starship-bridge-simulator/actions/runs/40197179859/artifacts/12600592652).
+- Screenshot review: Vesper has a visually distinct warm, sandy planet and correctly labeled arrival; the server-driven transit tunnel and always-visible Main Screen status/ETA are legible. Noted an overly long optics explanation dominating the 900 px Main Screen sidebar. Changed it into an accessible **collapsed-by-default disclosure**, so interstellar telemetry is above the fold without deleting optional training help. Removed stale Stage D text from the status banner.
+- A repeated WebGL regression surfaced one intermittent `postProcessManager` disposal-time exception despite reaching all four correct destination scenes; added a render-loop disposal guard so queued Babylon frames cannot access a torn-down scene. **The new commit must pass the full regression matrix before Stage E is marked green.**
+
+### Final hands-on playtest — needs a human crew
+Automated snapshots/browser scripts establish behavior and basic presentation, but cannot substitute for judging the **feel** of a 51-second voyage, ease of locating the correct button, readability across monitors, motion comfort, and camera aesthetics.
+
+On Windows (using the existing local checkout of `feature/interstellar-travel-v1`, without discarding uncommitted work):
+
+```powershell
+npm.cmd install
+npm.cmd run build
+npm.cmd test
+npm.cmd run dev
+```
+
+Open `http://localhost:5173` in **two separate browser windows**, leaving one as Main Screen and choosing **Helm** for the other. In Helm, open **Galactic Map (G)** and inspect the route, select Vesper (preview only), **Plot Route**, then in **Jump Drive** press **Engage Jump**. Check the 6-second charge, 45-second tunnel, ETA and shared Main Screen overlay. Try **Cancel Charge** on a separate attempt; verify it returns to the plotted route. Reload Main Screen while the server is in transit, confirm the countdown resumes, then view Vesper at arrival. Fly locally, plot a Vesper target, return to Aster Reach, and inspect local **System Map (M)** and planet focus. Confirm the old system never remains on screen. If motion/legibility or control placement feels wrong, record the screenshot and the step before approving the PR.
+
+**Stage E exit rule:** all current-head Windows/Linux/Chromium jobs pass, plus human acceptance of gameplay and presentation. PR #10 stays **draft and unmerged** until the owner expressly approves a merge.
 
 ## Local verification
 
