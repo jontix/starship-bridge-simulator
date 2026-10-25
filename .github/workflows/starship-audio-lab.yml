@@ -43,6 +43,7 @@ jobs:
         with:
           node-version: '22'
       - run: npm install
+      - run: npm run audio:fetch
       - run: npm run build
       - run: npx playwright install chromium --with-deps
       - run: node scripts/smoke-sound-lab-browser.mjs
