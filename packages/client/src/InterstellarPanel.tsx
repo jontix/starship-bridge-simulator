@@ -39,6 +39,37 @@ export function InterstellarReadout({ snapshot }: { snapshot: GameSnapshot | nul
   </section>;
 }
 
+/** Main Screen overlay: live server-owned jump status stays visible without scrolling
+ * the planet/camera settings panel. Read-only by design.
+ */
+export function InterstellarStatusBanner({ snapshot }: { snapshot: GameSnapshot | null }) {
+  if (!snapshot || snapshot.interstellar.phase === "idle") return null;
+  const jump = snapshot.interstellar;
+  const progress = jumpProgressPercent(snapshot);
+  return <section className="interstellar-banner" aria-label="Shared interstellar journey status" aria-live="off">
+    <div className="interstellar-banner-head">
+      <span>INTERSTELLAR {jump.phase === "charging" ? "CHARGING" : "TRANSIT"}</span>
+      <strong>{jumpDestinationName(snapshot)}</strong>
+    </div>
+    <div className="interstellar-banner-facts">
+      <div><span>FROM</span><strong>{currentSystemName(snapshot)}</strong></div>
+      <div><span>RANGE</span><strong>{jump.distanceLightYears?.toFixed(2) ?? "—"} ly</strong></div>
+      <div><span>{jump.phase === "charging" ? "DEPARTURE" : "ARRIVAL"} ETA</span>
+        <strong>{jumpEta(jump.etaSeconds)}</strong></div>
+    </div>
+    {jump.phase === "transit" ? <>
+      <div className="interstellar-banner-progress-titles">
+        <span>SERVER-CONFIRMED TRANSIT</span><strong>{progress}%</strong>
+      </div>
+      <div className="jump-progress" role="progressbar" aria-label="Main Screen interstellar transit progress"
+        aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
+        <span style={{ width: progress + "%" }}/>
+      </div>
+    </> : <p>Jump charge remaining: {jumpEta(jump.spoolRemainingSeconds)}</p>}
+    <small>Shared bridge telemetry · destination visuals follow in Stage D</small>
+  </section>;
+}
+
 export function InterstellarPanel({
   room, snapshot, notice, openGalacticMap
 }: {
