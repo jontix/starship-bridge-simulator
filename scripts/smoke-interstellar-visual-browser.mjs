@@ -93,7 +93,25 @@ try {
   await page.getByText("Connected · Main Screen").waitFor({ timeout: 30000 });
 
   async function assertRenderer(systemId, primaryId, label) {
-    await page.locator('canvas.scene[data-system-id="' + systemId + '"]').waitFor({ timeout: 35000 });
+    try {
+      await page.locator('canvas.scene[data-system-id="' + systemId + '"]')
+        .waitFor({ state: "attached", timeout: 35000 });
+    } catch (error) {
+      const state = await page.evaluate(() => ({
+        canvasId: document.querySelector("canvas.scene")?.getAttribute("data-system-id"),
+        allCanvasIds: Array.from(document.querySelectorAll("canvas.scene")).map(canvas =>
+          canvas.getAttribute("data-system-id")),
+        counters: window.__bridgeRendererDiagnostics,
+        connection: document.querySelector(".connection-status")?.textContent,
+        mapTitle: document.querySelector(".system-map-heading h2")?.textContent,
+        visible: document.body?.textContent?.slice(0, 1300)
+      })).catch(e => ({ error: String(e) }));
+      console.error("MISSING DESTINATION CANVAS", label, JSON.stringify(state),
+        "browser errors:", errors.join("\\n"), "server system:", ship?.universe.systemId);
+      await page.screenshot({ path: join(screenshots, "jump-visual-missing-" + label + ".png"),
+        timeout: 10000 }).catch(() => undefined);
+      throw error;
+    }
     try {
       await page.waitForFunction(
         ({ id, primary }) => {
