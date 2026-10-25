@@ -39,3 +39,4 @@ jobs:
       - run: node scripts/smoke-universe.mjs vesper
       - run: node scripts/smoke-cruise.mjs
       - run: node scripts/smoke-interstellar.mjs
+      - run: node scripts/smoke-station-persistence.mjs
