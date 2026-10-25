@@ -73,7 +73,21 @@ try {
       }
     });
     await page.goto("http://127.0.0.1:5173", { waitUntil: "domcontentloaded" });
-    await page.getByText("Connected · Main Screen").waitFor({ timeout: 25_000 });
+    try {
+      await page.getByText("Connected · Main Screen").waitFor({ timeout: 30_000 });
+    } catch (error) {
+      const diagnostic = await page.evaluate(() => ({
+        title: document.title,
+        appText: document.querySelector(".app")?.textContent?.slice(0, 1700) ?? null,
+        connection: document.querySelector(".connection-status")?.textContent ?? null,
+        bodyText: document.body?.textContent?.slice(0, 1400) ?? null
+      })).catch(e => ({ diagnosticError: String(e) }));
+      console.error("GALACTIC CHROMIUM CONNECTION DIAGNOSTIC", JSON.stringify(diagnostic),
+        "browser errors:", errors.join("\\n"));
+      await page.screenshot({ path: join(artifactDir, "galactic-connection-failure.png"),
+        fullPage: true, timeout: 5000 }).catch(() => undefined);
+      throw error;
+    }
   }
   await helm.locator("header .role-select select").selectOption("helm");
   await helm.getByText("Connected · Helm").waitFor({ timeout: 25_000 });
