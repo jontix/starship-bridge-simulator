@@ -82,8 +82,8 @@ async function verifyLeg(origin, dest, onCharge, onTransit) {
   await onCharge?.();
   await until(() => helmState?.interstellar.phase === "transit", "transit to " + dest, 14_000);
   const chargeElapsed = Date.now() - start;
-  assert.ok(chargeElapsed >= 5_100 && chargeElapsed < 13_000,
-    "Production spool must take approx six wall-clock seconds: " + chargeElapsed);
+  assert.ok(chargeElapsed >= 5_100 && chargeElapsed < 8_500,
+    "Production spool must take ~6 real seconds even on loaded Windows: " + chargeElapsed);
   assert.equal(helmState.universe.systemId, origin);
   assert.ok(helmState.tick > initialChargeTick);
   const transitStart = Date.now();
@@ -91,8 +91,8 @@ async function verifyLeg(origin, dest, onCharge, onTransit) {
   await until(() => helmState?.universe.systemId === dest &&
     helmState?.interstellar.phase === "idle", "arrival " + dest, 67_000);
   const transitElapsed = Date.now() - transitStart;
-  assert.ok(transitElapsed >= 39_000 && transitElapsed < 67_000,
-    "Production transit must take approx 45 wall-clock seconds: " + transitElapsed);
+  assert.ok(transitElapsed >= 41_000 && transitElapsed < 50_000,
+    "Production transit must take ~45 real seconds even on loaded Windows: " + transitElapsed);
   assert.ok(Date.now() - start >= 45_000, "A real-speed jump cannot arrive instantly");
   const arrival = helmState;
   assert.equal(arrival.cruise.mode, "local");
