@@ -279,7 +279,7 @@ function App() {
         )}
         {role !== "helm" && <CruiseStatusBanner snapshot={snapshot}/>}
         <div className="scene-caption">
-          {liveSystem.name.toUpperCase()} · {snapshot?.interstellar.phase !== "idle" ? "INTERSTELLAR" :
+          {liveSystem.name.toUpperCase()} · {snapshot?.interstellar.phase && snapshot.interstellar.phase !== "idle" ? "INTERSTELLAR" :
             snapshot?.cruise.mode === "local" ? "LOCAL" : "INTERPLANETARY"} ·
           FRAME: {(snapshot?.universe.referenceBodyId ?? liveSystem.start.referenceBodyId).toUpperCase()} · 30 HZ
         </div>
