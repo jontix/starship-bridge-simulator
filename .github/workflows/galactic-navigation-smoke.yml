@@ -23,6 +23,7 @@ jobs:
       - run: npm run build
       - run: npx playwright install chromium --with-deps
       - run: node scripts/smoke-galactic-browser.mjs
+      - run: node scripts/smoke-station-switch-browser.mjs
       - name: Upload Galactic Navigation screenshots
         if: always()
         uses: actions/upload-artifact@v4
