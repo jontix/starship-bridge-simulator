@@ -1,4 +1,5 @@
 import { Room, Client } from "colyseus";
+import { performance } from "node:perf_hooks";
 import {
   applyHelmCommand, createInitialShipState, HelmCommandSchema,
   RoleSchema, stepShip, DEFAULT_SYSTEM_ID, getStarSystem, validateStarCatalog,
@@ -59,6 +60,10 @@ export class BridgeRoom extends Room {
   private cruise: CruiseState = createCruiseState();
   private interstellar: InterstellarState = createInterstellarState();
   private readonly jumpTimings = roomJumpTimings();
+  // Propulsion physics uses a fixed 30 Hz step. Jump timers must instead use
+  // monotonic elapsed real time: a loaded Windows event loop may tick <30 Hz,
+  // which otherwise stretches a 6s/45s jump into 8s/56s for the crew.
+  private previousWallTickMs = performance.now();
 
   private get epochSeconds(): number {
     return this.startUnixSeconds + this.tick * TICK_SECONDS;
@@ -148,6 +153,10 @@ export class BridgeRoom extends Room {
     );
 
     this.setSimulationInterval(() => {
+      const wallNowMs = performance.now();
+      const interstellarElapsedSeconds = Math.max(0,
+        (wallNowMs - this.previousWallTickMs) / 1000);
+      this.previousWallTickMs = wallNowMs;
       this.tick += 1;
       let arrived = false;
       if (this.interstellar.phase === "idle") {
@@ -170,7 +179,7 @@ export class BridgeRoom extends Room {
             this.starSystem, this.frame, this.ship.position, this.epochSeconds
           );
         }
-        const step = stepInterstellar(this.interstellar, TICK_SECONDS);
+        const step = stepInterstellar(this.interstellar, interstellarElapsedSeconds);
         this.interstellar = step.state;
         if (step.arrivalSystemId) {
           this.commitJumpArrival(step.arrivalSystemId);
