@@ -1,0 +1,106 @@
+/* Galactic Navigation is deliberately distinct from the within-system AU map.
+ * The sector chart only projects authored LIGHT-YEAR catalogue positions.
+ */
+.galactic-map-toggle {
+  width:auto;margin:0;padding:8px 13px;background:#102a3a;
+  border-color:#367b88;color:#b5eef3;font-size:11px;letter-spacing:.07em;font-weight:800;
+  white-space:nowrap;
+}
+.galactic-map-toggle.active {background:#174c60;border-color:#7ce5e9;}
+.galactic-map-shade {
+  position:absolute;inset:0;z-index:130;padding:14px;
+  background:rgba(2,9,18,.94);backdrop-filter:blur(10px);
+  display:flex;align-items:center;justify-content:center;
+  pointer-events:auto;
+}
+.galactic-map-dialog {
+  display:flex;flex-direction:column;overflow:hidden;width:min(1200px,100%);
+  max-height:100%;height:min(810px,100%);
+  border:1px solid #426779;border-radius:15px;color:#dceefa;
+  background:linear-gradient(128deg,#102c3d 0%,#081a2a 54%,#0b1728 100%);
+  box-shadow:0 30px 90px #0009;
+}
+.galactic-map-heading {
+  display:flex;justify-content:space-between;align-items:flex-start;gap:18px;
+  padding:19px 23px;border-bottom:1px solid #325469;background:#081b2cad;flex-wrap:nowrap;
+}
+.galactic-overline {font-size:10px;letter-spacing:.17em;font-weight:800;color:#65bcd4;}
+.galactic-map-heading h2 {margin:5px 0 4px;font-size:26px;letter-spacing:.09em;}
+.galactic-map-heading p {margin:0;color:#a3c0d3;font-size:12px;line-height:1.5;}
+.galactic-map-heading button {margin:0;width:auto;padding:9px 17px;font-size:12px;font-weight:700;}
+.galactic-map-body {min-height:0;flex:1;display:grid;grid-template-columns:minmax(0,1.7fr) minmax(285px,.9fr);}
+.galactic-chart-column {min-width:0;min-height:0;padding:17px 20px;display:flex;flex-direction:column;overflow-y:auto;}
+.galactic-chart-meta {display:flex;justify-content:space-between;gap:8px;font-size:9px;letter-spacing:.1em;color:#78b8cf;}
+.galactic-chart {width:100%;min-height:220px;flex:1;max-height:510px;border:1px solid #31536e;border-radius:10px;background:#091e31;margin:10px 0;box-shadow:inset 0 0 55px #153f5280;}
+.galactic-chart text {font-family:ui-monospace,monospace;pointer-events:none;}
+.galactic-map-legend {display:flex;flex-wrap:wrap;gap:14px;font-size:10px;color:#accbdb;}
+.galactic-map-legend span {display:inline-flex;align-items:center;gap:6px;}
+.galactic-map-legend i {width:9px;height:9px;display:inline-block;border-radius:50%;}
+.galactic-map-legend i.selected {background:#72f6ff;}
+.galactic-map-legend i.plotted {background:#ffbd77;}
+.galactic-map-legend i.current {background:#ffe0ac;}
+.galactic-chart-column>p {color:#779fb3;font-size:11px;line-height:1.5;margin:12px 0 0;}
+.galactic-map-aside {min-height:0;border-left:1px solid #33566a;padding:16px 18px;overflow-y:auto;}
+.galactic-map-aside h3 {font-size:12px;letter-spacing:.09em;color:#c2e9f6;margin:4px 0 10px;}
+.galactic-system-options {display:grid;grid-template-columns:1fr;gap:7px;}
+.galactic-system-options button {display:flex;flex-direction:column;align-items:flex-start;gap:5px;margin:0;text-align:left;
+  border-color:#34576d;background:#0e293a;padding:11px;}
+.galactic-system-options button.selected {border-color:#64e3ed;background:#164357;}
+.galactic-system-options button>span {font-size:13px;font-weight:700;color:#e6f9ff;}
+.galactic-system-options small {font-size:10px;color:#8dbcd2;letter-spacing:.07em;}
+.galactic-selection {margin-top:15px;padding:13px;background:#091e30;border:1px solid #2d5065;border-radius:9px;}
+.galactic-selection h3 {font-size:19px;margin:4px 0;color:#f0faff;}
+.galactic-selection p {font-size:11px;line-height:1.5;color:#a8c3d5;margin:0 0 12px;}
+.galactic-facts {display:grid;gap:7px;}
+.galactic-facts>div {display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:10px;color:#83aebf;}
+.galactic-facts strong {font-size:11px;text-align:right;color:#e1faff;font-variant-numeric:tabular-nums;}
+.galactic-map-aside .galactic-plot-button {margin-top:12px;background:#145b66;border-color:#67dce4;color:#e3ffff;font-weight:800;letter-spacing:.08em;}
+.galactic-map-aside .galactic-return-button {border-color:#41718c;background:#162c46;font-size:11px;font-weight:800;}
+.galactic-readiness {font-size:11px;color:#9ccbd2;line-height:1.45;}
+.galactic-observer-note {border:1px solid #385e70;padding:12px;margin-top:13px;background:#153040;color:#d5ecf2;font-size:11px;line-height:1.5;}
+.galactic-stage-note {font-size:10px;line-height:1.5;color:#9caebf;border-top:1px solid #33556a;margin-top:17px;padding-top:10px;}
+/* Three separate Helm navigation regimes. */
+.helm-situation-tabs {grid-template-columns:repeat(3,minmax(0,1fr));}
+.helm-workstation .helm-situation-tabs button {font-size:9px;padding:10px 2px;}
+.helm-situation .interstellar-panel h3 {margin:0 0 8px;font-size:12px;color:#bdebf4;}
+.interstellar-readout {display:flex;flex-direction:column;gap:6px;background:#081f2f;border:1px solid #2c5467;border-radius:8px;padding:10px;}
+.jump-metric {display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:10px;color:#8ab6ca;}
+.jump-metric strong {color:#e1faff;font-size:11px;text-align:right;font-variant-numeric:tabular-nums;}
+.jump-event {font-size:10px;line-height:1.5;color:#a8c9db;margin:6px 0 0;border-top:1px solid #2b5068;padding-top:7px;}
+.jump-arrival {padding:7px;color:#b4f2d4;background:#143e38;border:1px solid #2e7063;border-radius:6px;font-size:11px;}
+.jump-progress-titles {display:flex;justify-content:space-between;gap:8px;font-size:10px;color:#9cc7d6;margin-top:5px;}
+.jump-progress-titles strong {color:#a0f2e9;}
+.jump-progress {height:9px;background:#172e41;border:1px solid #416a78;border-radius:8px;overflow:hidden;}
+.jump-progress>span {height:100%;display:block;background:linear-gradient(90deg,#248ba4,#a0eee3);transition:width 100ms linear;}
+.jump-controls {margin-top:11px;display:flex;flex-direction:column;gap:7px;}
+.jump-controls label {font-size:10px;color:#b3dce8;letter-spacing:.05em;}
+.jump-controls select {width:100%;font-size:11px;}
+.helm-situation .jump-controls button {margin:0;padding:10px;font-size:10px;font-weight:800;letter-spacing:.06em;}
+.helm-situation .jump-controls button.jump-open-chart {background:#15354a;border-color:#48879b;}
+.helm-situation .jump-controls button.jump-plot {background:#20465b;border-color:#64b5c8;}
+.helm-situation .jump-controls button.jump-engage {background:#1d635c;border-color:#6de8d0;color:#edfff9;}
+.helm-situation .jump-controls button.jump-cancel {background:#49332f;border-color:#ca9178;color:#ffe5d5;}
+.jump-selected-route {display:flex;flex-direction:column;gap:5px;background:#112e3e;border:1px solid #2b5165;border-radius:7px;padding:9px;font-size:10px;color:#9ebfcc;}
+.jump-selected-route strong {font-size:12px;color:#eefaff;}
+.jump-readiness {margin:2px 0;font-size:10px;color:#a5d4d6;line-height:1.5;}
+.jump-notice {margin:2px 0;padding:8px;border:1px solid #406975;border-radius:6px;color:#d9f3ef;font-size:10px;line-height:1.5;}
+.jump-stage-warning {font-size:10px;color:#c8ac80;border-top:1px solid #3e5d68;padding-top:8px;line-height:1.5;}
+.main-panel .interstellar-readout {margin:8px 0 14px;}
+.main-panel .jump-metric {flex-wrap:wrap;}
+.main-panel .jump-metric strong {font-size:11px;}
+@media(max-width:920px) {
+  .galactic-map-body {grid-template-columns:1fr;overflow-y:auto;}
+  .galactic-chart-column {flex:0 0 auto;overflow:visible;}
+  .galactic-chart {min-height:270px;max-height:400px;}
+  .galactic-map-aside {border-left:0;border-top:1px solid #33566a;overflow:visible;}
+}
+@media(max-width:530px) {
+  .galactic-map-shade {padding:5px;}
+  .galactic-map-heading {padding:13px 11px;}
+  .galactic-map-heading h2 {font-size:17px;}
+  .galactic-map-heading p {font-size:10px;}
+  .galactic-chart-column {padding:12px 9px;}
+  .galactic-chart-meta {flex-direction:column;}
+  .galactic-map-aside {padding:12px;}
+  .galactic-map-toggle {padding:8px;}
+}
