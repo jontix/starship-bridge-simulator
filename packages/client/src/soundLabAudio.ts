@@ -191,6 +191,23 @@ export class StarshipSoundEngine {
       ftl: makeVoice([[110, "sine", 0.06], [165, "triangle", 0.05], [220, "sine", 0.03], [330, "sine", 0.018]], 1350, 1750),
       jump: makeVoice([[55, "sine", 0.07], [82.5, "sine", 0.055], [110, "triangle", 0.026], [165, "sine", 0.014]], 740, 900)
     };
+    // Each advanced drive has a genuinely evolving sound even if nobody
+    // touches the sliders. Sub-audio modulators add slow spectral motion.
+    // They are deliberately very subtle to avoid an exhausting 45s tunnel.
+    const fieldMotion = ctx.createOscillator();
+    fieldMotion.type = "sine";
+    fieldMotion.frequency.value = 0.31;
+    const fieldDepth = ctx.createGain();
+    fieldDepth.gain.value = 17; // ±17 cents
+    fieldMotion.connect(fieldDepth).connect(this.voices.ftl.tones[2].detune);
+    fieldMotion.start();
+    const corridorMotion = ctx.createOscillator();
+    corridorMotion.type = "sine";
+    corridorMotion.frequency.value = 0.08;
+    const corridorDepth = ctx.createGain();
+    corridorDepth.gain.value = 85; // ±85 Hz of spectral filter breathing
+    corridorMotion.connect(corridorDepth).connect(this.voices.jump.filter.frequency);
+    corridorMotion.start();
     this.refresh();
   }
 
