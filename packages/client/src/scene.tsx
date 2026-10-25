@@ -134,7 +134,9 @@ export function MainScene({
       if (propsRef.current.showHeadingSphere !== spherePreviouslyVisible) {
         spherePreviouslyVisible = propsRef.current.showHeadingSphere;
         // Open the globe at a useful scale without locking away subsequent manual zoom.
-        orbit.radius = spherePreviouslyVisible ? Math.max(orbit.radius, 135) : Math.min(orbit.radius, 82);
+        // Helm v2 leaves a wide, unobstructed central navigation viewport.
+        // Pull back so the full 104m heading sphere fits above its order cards.
+        orbit.radius = spherePreviouslyVisible ? Math.max(orbit.radius, 305) : Math.min(orbit.radius, 82);
       }
     };
 
@@ -251,7 +253,15 @@ export function MainScene({
         ship.rotationQuaternion?.copyFrom(pose.orientation);
         const frameDt = Math.min(engine.getDeltaTime() / 1000, 0.05);
         const follow = 1 - Math.exp(-10 * frameDt);
-        orbit.target = Vector3.Lerp(orbit.target, renderPosition, follow);
+        // The Helm HUD occupies the lower part of the full-screen canvas.
+        // Aim slightly below the ship when the heading globe is active so
+        // the globe appears *higher on screen*, in the transparent portal.
+        // Camera-only change: ship physics and world coordinates are intact.
+        const navigationAim = propsRef.current.showHeadingSphere &&
+          propsRef.current.mode === "orbit"
+          ? renderPosition.add(new Vector3(0, -44, 0))
+          : renderPosition;
+        orbit.target = Vector3.Lerp(orbit.target, navigationAim, follow);
         tactical.target = Vector3.Lerp(tactical.target, renderPosition, follow);
         sector.target = Vector3.Lerp(sector.target, renderPosition, follow);
         const q = {
