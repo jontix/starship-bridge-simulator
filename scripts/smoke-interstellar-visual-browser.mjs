@@ -71,6 +71,7 @@ try {
   helm = await client.joinOrCreate("bridge", { role: "helm" });
   let ship = null;
   helm.onMessage("snapshot", state => { ship = state; });
+  helm.onMessage("interstellar_notice", () => {});
   await until(() => ship?.universe.systemId === "aster-reach", "starting crew snapshot", 8000);
 
   browser = await chromium.launch({
@@ -93,14 +94,28 @@ try {
 
   async function assertRenderer(systemId, primaryId, label) {
     await page.locator('canvas.scene[data-system-id="' + systemId + '"]').waitFor({ timeout: 35000 });
-    await page.waitForFunction(
-      ({ id, primary }) => {
-        const c = window.__bridgeRendererDiagnostics;
-        return c && c.active === 1 && c.created - c.disposed === 1 &&
-          c.activeSystemId === id && c.activeSkyBodyIds.includes(primary) &&
-          c.oldSystemSkyBodies === 0 && c.skyMeshes > 0;
-      }, { id: systemId, primary: primaryId }, { timeout: 40000 }
-    );
+    try {
+      await page.waitForFunction(
+        ({ id, primary }) => {
+          const c = window.__bridgeRendererDiagnostics;
+          return c && c.active === 1 && c.created - c.disposed === 1 &&
+            c.activeSystemId === id && c.activeSkyBodyIds.includes(primary) &&
+            c.oldSystemSkyBodies === 0 && c.skyMeshes > 0;
+        }, { id: systemId, primary: primaryId }, { timeout: 40000 }
+      );
+    } catch (error) {
+      const state = await page.evaluate(() => ({
+        canvasId: document.querySelector("canvas.scene")?.getAttribute("data-system-id"),
+        counters: window.__bridgeRendererDiagnostics,
+        connection: document.querySelector(".connection-status")?.textContent,
+        visible: document.body.textContent.slice(0, 1500)
+      })).catch(e => ({error:String(e)}));
+      console.error("RENDERER ARRIVAL DIAGNOSTIC", label, JSON.stringify(state),
+        "browser errors:", errors.join("\\n"), "server system:", ship?.universe.systemId);
+      await page.screenshot({ path: join(screenshots, "jump-visual-failure-" + label + ".png"),
+        timeout: 10_000 }).catch(() => undefined);
+      throw error;
+    }
     const metrics = await page.evaluate(() => ({ ...window.__bridgeRendererDiagnostics }));
     assert.ok(metrics.skyTextures < 140, "Sky texture count potentially leaking: " + JSON.stringify(metrics));
     assert.equal(metrics.active, 1);
