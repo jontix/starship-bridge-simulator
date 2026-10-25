@@ -57,7 +57,7 @@ export function HelmPanel({
   const [lift, setLift] = useState(0);
   const [rightTab, setRightTab] = useState<"local" | "cruise">("local");
   const [showDisplay, setShowDisplay] = useState(false);
-  const initializedRoom = useRef<string | null>(null);
+  const initializedRoom = useRef<Room | null>(null);
   const previousDriveMode = useRef<string | null>(null);
 
   const ship = snapshot?.ship;
@@ -74,8 +74,8 @@ export function HelmPanel({
       initializedRoom.current = null;
       return;
     }
-    if (initializedRoom.current === room.id) return;
-    initializedRoom.current = room.id;
+    if (initializedRoom.current === room) return;
+    initializedRoom.current = room;
     setSpeed(Math.round(ship.desiredSpeed));
     setStrafe(Math.round(ship.desiredStrafe));
     setLift(Math.round(ship.desiredLift));
