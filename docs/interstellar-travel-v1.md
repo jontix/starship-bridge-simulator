@@ -37,11 +37,19 @@ Stage A is implemented and covered by CI.
 
 **Stage B is the backend/network protocol, not a usable Helm jump UI yet.** Clients may receive the new system ID, but safe asset/cache/interpolation switching belongs to Stage D. Do not manually use live jumps in the Babylon interface until Stage D is complete.
 
-## Stage C — game screens (not implemented)
+## Stage C — Galactic Navigation and bridge stations (implemented; verify current CI)
 
-- Dedicated Galactic Map distinct from the existing local System Map. Selected, plotted, and engaged commands must remain distinct.
-- Helm drive panel with current/destination, eligibility, route length, spool/ETA and Engage Jump.
-- Main Screen is read-only for jump commands, showing the same replicated phase, progress and arrival.
+- `GalacticMap.tsx` is a dedicated sector chart separate from `SystemMap.tsx`. It uses the catalog's three-dimensional light-year coordinates to calculate distance and route eligibility, with an X/Z projection and explicit Y metadata; it never renders galactic metres.
+- Accessible through **GALACTIC MAP (G)** in the shared header, with Escape to close. The existing within-system map remains **System Map (M)**. Both Helm and Main Screen can inspect the catalog and its connected route.
+- The route list and star markers distinguish **current**, **locally selected preview**, and **server-plotted target**. Helm's **Plot Selected Route** is noncommittal travel planning, sending only `set_interstellar_target`. Main Screen does not receive plot/engage/cancel controls.
+- `InterstellarPanel.tsx` adds a third **JUMP DRIVE** Helm tab alongside LOCAL NAV and FTL PLANNER. Its dropdown is an unsent preview; separate **PLOT ROUTE**, **ENGAGE JUMP**, and **CANCEL CHARGE** buttons reflect server-side drive eligibility, lockouts and `interstellar_notice` validation messages. Chart-to-Helm navigation opens this tab.
+- `InterstellarReadout` appears on Helm and read-only on Main Screen, with authoritative system, route ID, destination, light-year distance, phase, spool countdown, ETA, progress and arrival event. No client timer invents a jump.
+- Impulse controls and cruise planning are disabled during charging/transit; Helm prominently explains the correct action. Mid-transit cancellation stays unavailable because deep-space arrival has no model.
+- UI and chart views reset transient selected-system previews when `universe.systemId` changes; the server's plotted destination is never confused with local preview selection.
+- `interstellarUI.test.ts` checks connected destinations, distances, preview/plot readiness, state gating and progress formatting. `smoke-galactic-browser.mjs` launches a real Node/Colyseus server and two Chromium/WebGL bridge clients, checks read-only Main Screen, interactive Helm chart, preview versus server plot, engagement/cancellation, synchronized charge/transit and screenshots.
+- CI is configured to run the new unit suite on Windows Node 24/Linux Node 22, and the new browser scenario on Chromium. Passing claims require final workflow confirmation.
+
+**Stage C is the UI and command bridge, NOT the destination-system Babylon renderer handoff.** While the server can jump, the existing scene may retain old-system textures, local trails or pose interpolation on arrival. The controls display a Stage D limitation notice, and the browser smoke stops during transit rather than claiming a rendered Vesper arrival. Do not call the browser transition fully safe until Stage D passes.
 
 ## Stage D — cross-system rendering (not implemented)
 
