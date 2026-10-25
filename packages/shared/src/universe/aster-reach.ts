@@ -92,5 +92,8 @@ export const ASTER_REACH: StarSystem = {
   galacticPositionLightYears: vec3(0, 0, 0),
   epochUnixSeconds: Date.UTC(2026, 9, 24, 0, 0, 0) / 1000,
   start: { referenceBodyId: "haven-highport", offsetFromReferenceMeters: vec3(0, 0, 300) },
+  interstellarArrival: {
+    referenceBodyId: "haven-highport", offsetFromReferenceMeters: vec3(0, 0, 250_000)
+  },
   bodies
 };
