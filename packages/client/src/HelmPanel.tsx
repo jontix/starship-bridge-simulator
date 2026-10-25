@@ -113,7 +113,8 @@ export function HelmPanel({
   const statusTone = ship?.emergencyStopping ? "alert" :
     !room || !snapshot ? "muted" : turnError > 2 ? "amber" : "nominal";
   const targetReady = Boolean(target);
-  const cruiseLabel = cruise?.mode === "local" ? "IMPULSE / LOCAL" :
+  const cruiseLabel = !cruise ? "AWAITING NAV LINK" :
+    cruise.mode === "local" ? "IMPULSE / LOCAL" :
     cruise?.mode === "spooling" ? "FTL · SPOOLING" :
     cruise?.mode === "dropping" ? "FTL · DECELERATING" : "FTL · CRUISE";
 
