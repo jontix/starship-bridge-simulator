@@ -132,8 +132,9 @@ export function InterstellarPanel({
       {notice && <p className="jump-notice" role="status">{notice}</p>}
     </div>
     <p className="jump-stage-warning">
-      Stage C bridge controls are experimental. Destination rendering and old-system
-      asset reset will be completed in Stage D. Arrival is already authoritative.
+      Interstellar navigation is server-authoritative. During transit the
+      real-space view is replaced with a corridor visual; arrival reloads
+      the destination star system and resets previous-system resources.
     </p>
   </section>;
 }
