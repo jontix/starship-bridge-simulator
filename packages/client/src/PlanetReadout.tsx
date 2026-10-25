@@ -79,15 +79,18 @@ export function PlanetViewControls({
       The selected world may be fully or partially hidden behind this closer body;
       change course or continue observing as orbital positions evolve.
     </p>}
-    <p className="subtle planet-view-hint">
-      Fractal shading adds smaller features as the planet fills the screen and
-      filters detail below one pixel. It never changes the planet's physical size.
-      Globes have actual angular scale in 3D. System Map icons remain schematic.
-      Changing the target or magnification automatically opens the
-      <strong> Planet / orbital</strong> camera. At 4× or greater this becomes
-      a telescope feed, hiding the local ship and station
-      while preserving every object's true angular scale. To inspect Aster, choose
-      <strong> Aster · star</strong> above: Automatic targets the nearby world, Haven.
-    </p>
+    <details className="planet-view-hint">
+      <summary>How planetary optics and surface detail work</summary>
+      <p className="subtle">
+        Fractal shading adds smaller features as the planet fills the screen and
+        filters detail below one pixel. It never changes the planet's physical size.
+        Globes have actual angular scale in 3D. System Map icons remain schematic.
+        Changing the target or magnification automatically opens the
+        <strong> Planet / orbital</strong> camera. At 4× or greater this becomes
+        a telescope feed, hiding the local ship and station
+        while preserving every object's true angular scale. To inspect Aster, choose
+        <strong> Aster · star</strong> above: Automatic targets the nearby world, Haven.
+      </p>
+    </details>
   </div>;
 }
