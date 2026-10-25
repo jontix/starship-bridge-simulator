@@ -51,10 +51,19 @@ Stage A is implemented and covered by CI.
 
 **Stage C is the UI and command bridge, NOT the destination-system Babylon renderer handoff.** While the server can jump, the existing scene may retain old-system textures, local trails or pose interpolation on arrival. The controls display a Stage D limitation notice, and the browser smoke stops during transit rather than claiming a rendered Vesper arrival. Do not call the browser transition fully safe until Stage D passes.
 
-## Stage D — cross-system rendering (not implemented)
+## Stage D — destination-system rendering and shared jump presentation (implemented, CI pending)
 
-- Reset snapshot interpolation on `universe.systemId` changes. Rebuild star and planet assets, lights, camera/focus and previous-system caches without memory growth.
-- Use a dedicated cinematic transit mode driven by replicated state, not a cosmetic instant teleport.
+- `systemTransition.ts` defines deterministic client-owned handoff rules: scene keys derive **only** from authoritative `universe.systemId`; interpolation history resets when system, local reference body, local-vs-cruise mode or transit boundary changes. A stale telescope focus from the old catalog immediately maps to `auto` while state resets asynchronously.
+- `main.tsx` keys `MainScene` by the authoritative system ID. **Babylon Engine, both local and planetary Scenes, cameras, lights, navigation trails and planet textures are disposed/re-created at each system change.** Role, station controls, camera selection, display preferences and Colyseus room survive. Optical zoom, target and unsent heading previews reset on arrival.
+- `scene.tsx` uses the per-system key as well as interpolation-frame checking to prevent blending Aster and Vesper positions. A transit frame does not render the origin star system: the Babylon buffer is cleared instead of running the local/celestial passes in galactic deep space.
+- `InterstellarTransition.tsx` adds a server-phase-driven charging view and animated jump corridor, ETA/progress indicators from server telemetry, and a short one-shot arrival flash. There is no simulated deep-space metre coordinate. CSS supports reduced-motion preferences and does not intercept Helm controls.
+- `planetaryScene.ts` owns and disposes its sky textures, globes, ring meshes, shaders and starfield through the sky scene lifecycle. Each new sky is populated only from the current system's registered bodies. Development diagnostics (`window.__bridgeRendererDiagnostics`) report created/disposed/live WebGL renderers, celestial IDs and texture/mesh counts to detect leaks; these metrics do **not** control gameplay.
+- `SystemMap` is also keyed by the server system ID so catalog selection and orbital time previews reset after arrival. Invalid legacy optical targets are ignored synchronously, before any view tries to reference the destination's ephemerides.
+- `systemTransition.test.ts` checks the system key, interpolation barriers, focus validation and arrival event identity. It runs on Windows and Linux.
+- `smoke-interstellar-visual-browser.mjs` launches a real Colyseus Helm + Chromium bridge station, performs two complete **Aster Reach → Vesper → Aster Reach** voyages, inspects both Main Screen and Helm UI, checks the jump corridor, waits for destination body meshes, verifies the old world's IDs are absent and that there is exactly **one** live renderer after each switch, checks an open System Map/catalog handoff, tests new-system focus reset, verifies the Babylon WebGL context and records destination screenshots. The separate Chromium CI workflow runs this acceptance.
+- Stage D is not considered passing until the latest Windows, Linux, planetary, Galactic Map and interstellar destination Chromium jobs have verified results.
+
+**Game-play limits:** Arrivals are safe navigation anchors (250 km stand-off), not docking. Stage E continues with full connection/reconnect acceptance, camera/manual aesthetics, and user playtest before merging.
 
 ## Stage E — acceptance (not implemented)
 
@@ -71,8 +80,10 @@ npm.cmd test
 node scripts/smoke-universe.mjs
 node scripts/smoke-universe.mjs vesper
 node scripts/smoke-interstellar.mjs
+node scripts/smoke-galactic-browser.mjs
+node scripts/smoke-interstellar-visual-browser.mjs
 ```
 
-The smoke scripts require built workspaces. To manually preview Vesper as a *starting* system before the jump protocol exists, run with `BRIDGE_SYSTEM_ID=vesper` in the server process environment (see the repository README for the normal local server/client launch).
+The smoke scripts require built workspaces. To manually preview Vesper as a *starting* system without a crew jump, run with `BRIDGE_SYSTEM_ID=vesper` in the server process environment (see the repository README for the normal local server/client launch).
 
 Design reference: `STARSHIP_BRIDGE_SIMULATOR_MASTER_PLAN_AND_HANDOVER(1).md` supplied for the October 2026 handover, sections 7–10. The actual repository and verified tests remain the source of implementation truth.
