@@ -107,7 +107,8 @@ try {
   assert.equal((await state()).scene, "standby");
 
   await page.getByRole("button", { name: "Enable Audio" }).click();
-  assert.equal((await state()).enabled, true);
+  await page.waitForFunction(() => window.__soundLabDebug.state().enabled,
+    null, { timeout: 5000 });
   assert.equal((await state()).scene, "local");
   assert.deepEqual(exceptions, [], "Browser exceptions: " + exceptions.join("\n"));
   console.log("Starship Sound Lab Chromium PASS: no autoplay; Web Audio graph; local, FTL 4s spool/dropout; jump 6s charge/transit/arrival; live mix; mute/reset");
