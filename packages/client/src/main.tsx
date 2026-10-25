@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Client, type Room } from "colyseus.js";
 import { DEFAULT_SYSTEM_ID, getStarSystem, type GameSnapshot, type PlayerRole } from "@bridge-sim/shared";
 import { MainScene, type CameraMode } from "./scene";
+import { rendererSystemKey, visibleFocusId } from "./systemTransition";
+import { InterstellarTransition } from "./InterstellarTransition";
+import { orderedHeadingFromShip } from "./helmInstruments";
 import { assessPlanetView } from "./planetView";
 import type { SurfaceDetailMode } from "./surfaceDetail";
 import { HelmPanel } from "./HelmPanel";
@@ -15,6 +18,7 @@ import type { PickedHeading, SelectedHeading } from "./navigationVisuals";
 import "./styles.css";
 import "./helmStation.css";
 import "./galacticNavigation.css";
+import "./interstellarTransition.css";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL ?? `ws://${window.location.hostname}:2567`;
 
@@ -86,9 +90,29 @@ function App() {
   }, []);
 
   const liveSystem = getStarSystem(snapshot?.universe.systemId ?? DEFAULT_SYSTEM_ID);
+  const activeSystemId = rendererSystemKey(snapshot);
+  const focusInActiveSystem = visibleFocusId(snapshot, planetFocusId);
+  // An invalid old-system focus must not be passed even for one render frame.
   const opticalView = snapshot && cameraMode === "planet"
-    ? assessPlanetView(snapshot, planetFocusId, opticalZoom)
+    ? assessPlanetView(snapshot, focusInActiveSystem, opticalZoom)
     : null;
+
+  // The authoritative destination handoff invalidates telescope focus,
+  // magnification and uncommitted Helm heading previews, but not crew role,
+  // camera mode, display preferences or network room.
+  const previousSystemId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!snapshot) return;
+    const currentId = snapshot.universe.systemId;
+    if (previousSystemId.current && previousSystemId.current !== currentId) {
+      setPlanetFocusId("auto");
+      setOpticalZoom(1);
+      setSelectedHeading(orderedHeadingFromShip(snapshot.ship));
+      setCruiseNotice("");
+      setInterstellarNotice("");
+    }
+    previousSystemId.current = currentId;
+  }, [snapshot?.universe.systemId]);
 
   useEffect(() => {
     let alive = true;
@@ -203,16 +227,18 @@ function App() {
       </header>
       <main>
         <MainScene
+          key={activeSystemId}
           snapshot={snapshot}
           mode={cameraMode}
           showHeadingSphere={role === "helm" && showHeadingSphere && snapshot?.cruise.mode === "local" && snapshot.interstellar.phase === "idle"}
           showNavigationAids={showNavigationAids}
           selectedHeading={selectedHeading}
           onHeadingPicked={pickHeading}
-          planetFocusId={planetFocusId}
+          planetFocusId={focusInActiveSystem}
           opticalZoom={opticalZoom}
           surfaceDetailMode={surfaceDetailMode}
         />
+        <InterstellarTransition snapshot={snapshot}/>
         {role === "helm" ? (
           <HelmPanel
             room={room}
@@ -229,7 +255,7 @@ function App() {
             toggleAids={() => setShowNavigationAids(value => !value)}
             mode={cameraMode}
             setMode={setCameraMode}
-            planetFocusId={planetFocusId}
+            planetFocusId={focusInActiveSystem}
             setPlanetFocusId={setPlanetFocusId}
             opticalZoom={opticalZoom}
             setOpticalZoom={setOpticalZoom}
@@ -298,6 +324,7 @@ function App() {
             });
           }}/>}
         {showSystemMap && <SystemMap
+          key={activeSystemId}
           snapshot={snapshot}
           onClose={() => setShowSystemMap(false)}
           onFocusBody={bodyId => {
