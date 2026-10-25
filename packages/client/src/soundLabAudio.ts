@@ -50,7 +50,7 @@ export class StarshipSoundEngine {
       ...this.controls,
       cuesPlayed: this.cues,
       activeCues: this.effects?.activeCount ?? 0,
-      passBys: this.effects?.passCount ?? 0,
+      passBys: (this.effects?.passCount ?? 0) + (this.recorded?.status.playedCars ?? 0),
       recordings: this.recorded?.status ?? { ready: [], missing: [], errors: [], active: 0, playedCars: 0 },
       activeVoices: this.voices ? Object.entries(this.voices)
         .filter(([, voice]) => voice.bus.gain.value > 0.001)
