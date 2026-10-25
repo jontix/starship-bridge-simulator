@@ -227,7 +227,7 @@ function App() {
       </header>
       <main>
         {snapshot ? <MainScene
-          key={activeSystemId}
+          key={"babylon-scene:" + activeSystemId}
           snapshot={snapshot}
           mode={cameraMode}
           showHeadingSphere={role === "helm" && showHeadingSphere &&
@@ -326,7 +326,7 @@ function App() {
             });
           }}/>}
         {showSystemMap && <SystemMap
-          key={activeSystemId}
+          key={"system-map:" + activeSystemId}
           snapshot={snapshot}
           onClose={() => setShowSystemMap(false)}
           onFocusBody={bodyId => {
