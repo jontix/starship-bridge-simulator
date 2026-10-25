@@ -269,7 +269,7 @@ function App() {
             setMode={setCameraMode}
             showAids={showNavigationAids}
             toggleAids={() => setShowNavigationAids(value => !value)}
-            planetFocusId={planetFocusId}
+            planetFocusId={focusInActiveSystem}
             setPlanetFocusId={setPlanetFocusId}
             opticalZoom={opticalZoom}
             setOpticalZoom={setOpticalZoom}
