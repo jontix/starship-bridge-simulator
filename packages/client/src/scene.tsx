@@ -259,7 +259,7 @@ export function MainScene({
         // Camera-only change: ship physics and world coordinates are intact.
         const navigationAim = propsRef.current.showHeadingSphere &&
           propsRef.current.mode === "orbit"
-          ? renderPosition.add(new Vector3(0, -44, 0))
+          ? renderPosition.add(new Vector3(0, -14, 0))
           : renderPosition;
         orbit.target = Vector3.Lerp(orbit.target, navigationAim, follow);
         tactical.target = Vector3.Lerp(tactical.target, renderPosition, follow);
