@@ -62,36 +62,44 @@ try {
       "--enable-unsafe-swiftshader", "--disable-dev-shm-usage"]
   });
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-  const helm = await context.newPage();
-  const screen = await context.newPage();
   const errors = [];
-  for (const page of [helm, screen]) {
-    page.on("pageerror", e => errors.push(String(e)));
+  const connectPage = async (page, station) => {
+    page.on("pageerror", e => errors.push(station + ": " + String(e)));
     page.on("console", m => {
       if (m.type() === "error" || /shader compilation|unable to compile|failed to compile effect/i.test(m.text())) {
-        errors.push(m.text());
+        errors.push(station + ": " + m.text());
       }
+    });
+    page.on("requestfailed", request => {
+      if (/matchmake|2567/.test(request.url())) errors.push(
+        station + " network failure " + request.url() + " " + request.failure()?.errorText);
     });
     await page.goto("http://127.0.0.1:5173", { waitUntil: "domcontentloaded" });
     try {
-      await page.getByText("Connected · Main Screen").waitFor({ timeout: 30_000 });
+      await page.getByText("Connected · Main Screen").waitFor({ timeout: 35_000 });
     } catch (error) {
       const diagnostic = await page.evaluate(() => ({
         title: document.title,
         appText: document.querySelector(".app")?.textContent?.slice(0, 1700) ?? null,
-        connection: document.querySelector(".connection-status")?.textContent ?? null,
-        bodyText: document.body?.textContent?.slice(0, 1400) ?? null
+        connection: document.querySelector(".connection-status")?.textContent ?? null
       })).catch(e => ({ diagnosticError: String(e) }));
-      console.error("GALACTIC CHROMIUM CONNECTION DIAGNOSTIC", JSON.stringify(diagnostic),
+      console.error("GALACTIC CHROMIUM CONNECTION DIAGNOSTIC", station, JSON.stringify(diagnostic),
         "browser errors:", errors.join("\\n"));
       await page.screenshot({ path: join(artifactDir, "galactic-connection-failure.png"),
         fullPage: true, timeout: 5000 }).catch(() => undefined);
       throw error;
     }
-  }
+  };
+
+  // Join sequentially: each Babylon/WebGL station gets its first active
+  // rendering frame and Colyseus handshake before opening another page.
+  const helm = await context.newPage();
+  await connectPage(helm, "helm");
   await helm.locator("header .role-select select").selectOption("helm");
   await helm.getByText("Connected · Helm").waitFor({ timeout: 25_000 });
   await helm.getByRole("region", { name: "Helm workstation" }).waitFor({ timeout: 15_000 });
+  const screen = await context.newPage();
+  await connectPage(screen, "main-screen");
 
   // Main Screen can inspect the catalog but has NO plotting/engagement control.
   await screen.getByRole("button", { name: /GALACTIC MAP/ }).click();
