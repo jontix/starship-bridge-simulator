@@ -65,6 +65,10 @@ try {
 
   await page.getByRole("button", { name: "Enable Audio" }).click();
   await page.waitForFunction(() => window.__soundLabDebug.state().enabled);
+  for (const required of ["rumble", "glass", "car", "thunder"]) {
+    assert.ok((await state()).recordings.ready.includes(required),
+      "Real licensed recorded audio must decode in Chromium: missing " + required);
+  }
   assert.equal((await state()).scene, "standby");
   await page.getByRole("button", { name: "Preview Thrust" }).click();
   assert.equal((await state()).scene, "local",
@@ -114,6 +118,8 @@ try {
     null, { timeout: 22000 });
   assert.ok((await state()).passBys >= passesBefore + 7,
     "Seven irregular stereo pass-bys should play before automatic arrival");
+  assert.ok((await state()).recordings.playedCars >= 7,
+    "Corridor pass-bys must use genuine recorded car audio, not synthetic fallback");
 
   // Pending sequences must not re-trigger when switching/muting.
   await page.getByRole("button", { name: "Charge + Enter" }).click();
