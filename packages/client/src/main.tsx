@@ -24,6 +24,9 @@ const serverUrl = import.meta.env.VITE_SERVER_URL ?? `ws://${window.location.hos
 
 function App() {
   const [role, setRole] = useState<PlayerRole>("main-screen");
+  // Connection lifetime must not depend on the selected camera/station role.
+  // This ref also keeps retries and in-flight joins aligned with the UI.
+  const requestedRole = useRef<PlayerRole>("main-screen");
   const [cameraMode, setCameraMode] = useState<CameraMode>("planet");
   const [planetFocusId, setPlanetFocusId] = useState("auto");
   const [opticalZoom, setOpticalZoom] = useState(1);
@@ -138,12 +141,19 @@ function App() {
       if (!alive) return;
       setStatus(`Connecting to ${serverUrl}...`);
       try {
-        const newRoom = await client.joinOrCreate("bridge", { role });
+        const joiningRole = requestedRole.current;
+        const newRoom = await client.joinOrCreate("bridge", { role: joiningRole });
         if (!alive) { void newRoom.leave(); return; }
         joined = newRoom;
         attempts = 0;
         setRoom(newRoom);
-        setStatus(`Connected · ${role === "helm" ? "Helm" : "Main Screen"}`);
+        if (requestedRole.current !== joiningRole) {
+          newRoom.send("station_role", { role: requestedRole.current });
+        }
+        setStatus(`Connected · ${requestedRole.current === "helm" ? "Helm" : "Main Screen"}`);
+        newRoom.onMessage("station_role_notice", (message: string) => {
+          if (alive) console.warn("Bridge station role rejected:", message);
+        });
         newRoom.onMessage("cruise_notice", (message: string) => {
           if (alive) setCruiseNotice(message);
         });
@@ -176,7 +186,7 @@ function App() {
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (joined) void joined.leave();
     };
-  }, [role]);
+  }, []);
 
   return (
     <div className="app">
@@ -203,6 +213,14 @@ function App() {
           Station
           <select value={role} onChange={(event) => {
             const nextRole = event.target.value as PlayerRole;
+            requestedRole.current = nextRole;
+            // A station change is an in-room permission update, not a leave /
+            // join. If this is the only connected browser, leaving would
+            // otherwise dispose the voyage and reset Vesper to Aster Reach.
+            if (room) {
+              room.send("station_role", { role: nextRole });
+              setStatus(`Connected · ${nextRole === "helm" ? "Helm" : "Main Screen"}`);
+            }
             setShowSystemMap(false);
             setShowGalacticMap(false);
             setRole(nextRole);
