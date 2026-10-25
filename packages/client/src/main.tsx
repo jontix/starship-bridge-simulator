@@ -156,7 +156,10 @@ function App() {
             if (nextRole === "helm") {
               setCameraMode("orbit");
               setShowHeadingSphere(true);
-              setShowNavigationAids(true);
+              // Start with the interactive heading sphere, not the sprawling
+              // local 2.8km grid: the latter obscures the flight console.
+              // Crew can enable extra aids from the HUD when required.
+              setShowNavigationAids(false);
             } else {
               setCameraMode("planet");
               setShowHeadingSphere(false);
