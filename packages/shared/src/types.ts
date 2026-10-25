@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { Quat, Vec3 } from "./math.js";
 import type { CruiseState } from "./universe/cruise.js";
+import type { InterstellarState } from "./universe/interstellar.js";
 
 export const RoleSchema = z.enum(["helm", "main-screen"]);
 export type PlayerRole = z.infer<typeof RoleSchema>;
@@ -46,6 +47,7 @@ export type GameSnapshot = {
     frameOffsetMeters: Vec3;
   };
   cruise: CruiseState;
+  interstellar: InterstellarState;
   tick: number;
   serverTime: number;
   ship: ShipState;

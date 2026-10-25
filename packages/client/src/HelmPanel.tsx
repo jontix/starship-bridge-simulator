@@ -5,6 +5,7 @@ import {
 } from "@bridge-sim/shared";
 import type { CameraMode } from "./scene";
 import { CruisePanel, formatFlightTime } from "./CruisePanel";
+import { InterstellarPanel } from "./InterstellarPanel";
 import { PlanetViewControls } from "./PlanetReadout";
 import type { SurfaceDetailMode } from "./surfaceDetail";
 import type { SelectedHeading } from "./navigationVisuals";
@@ -24,6 +25,9 @@ type HelmPanelProps = {
   room: Room | null;
   snapshot: GameSnapshot | null;
   cruiseNotice: string;
+  interstellarNotice: string;
+  openGalacticMap: () => void;
+  jumpTabRequest: number;
   heading: SelectedHeading;
   setHeading: Dispatch<SetStateAction<SelectedHeading>>;
   showSphere: boolean;
@@ -47,7 +51,7 @@ const ratio = (value: number, maximum: number) =>
   Math.min(100, Math.max(0, Math.abs(value) / maximum * 100)) + "%";
 
 export function HelmPanel({
-  room, snapshot, cruiseNotice, heading, setHeading,
+  room, snapshot, cruiseNotice, interstellarNotice, openGalacticMap, jumpTabRequest, heading, setHeading,
   showSphere, toggleSphere, showAids, toggleAids, mode, setMode,
   planetFocusId, setPlanetFocusId, opticalZoom, setOpticalZoom,
   surfaceDetailMode, setSurfaceDetailMode
@@ -55,15 +59,21 @@ export function HelmPanel({
   const [speed, setSpeed] = useState(0);
   const [strafe, setStrafe] = useState(0);
   const [lift, setLift] = useState(0);
-  const [rightTab, setRightTab] = useState<"local" | "cruise">("local");
+  const [rightTab, setRightTab] = useState<"local" | "cruise" | "jump">("local");
   const [showDisplay, setShowDisplay] = useState(false);
   const initializedRoom = useRef<Room | null>(null);
   const previousDriveMode = useRef<string | null>(null);
 
+  useEffect(() => {
+    if (jumpTabRequest > 0) setRightTab("jump");
+  }, [jumpTabRequest]);
+
   const ship = snapshot?.ship;
   const cruise = snapshot?.cruise;
   const isLocal = cruise?.mode === "local";
-  const canOrder = Boolean(room && ship && isLocal);
+  const jumpPhase = snapshot?.interstellar.phase ?? "idle";
+  const jumpActive = jumpPhase !== "idle";
+  const canOrder = Boolean(room && ship && isLocal && !jumpActive);
   const system = snapshot ? getStarSystem(snapshot.universe.systemId) : null;
   const target = system?.bodies.find(body => body.id === cruise?.targetId);
 
@@ -85,13 +95,22 @@ export function HelmPanel({
   // Change the visible right-side mode when the drive actually changes,
   // but do not fight players clicking the tabs to inspect cruise planning.
   useEffect(() => {
-    const drive = cruise?.mode;
+    const drive = jumpActive ? "jump-" + jumpPhase :
+      cruise?.mode !== "local" ? cruise?.mode :
+      snapshot?.interstellar.destinationSystemId || snapshot?.interstellar.lastArrivalSystemId ?
+        "jump-plotted" : "local";
     if (!drive) return;
     if (drive !== previousDriveMode.current) {
       previousDriveMode.current = drive;
-      setRightTab(drive === "local" ? "local" : "cruise");
+      // A cancelled charge retains the plotted jump. Keep that console open
+      // rather than returning to LOCAL NAV and hiding the re-engage action.
+      setRightTab(drive.startsWith("jump") ? "jump" : drive === "local" ? "local" : "cruise");
     }
-  }, [cruise?.mode]);
+  }, [cruise?.mode, jumpActive, jumpPhase,
+      snapshot?.interstellar.destinationSystemId, snapshot?.interstellar.lastArrivalSystemId]);
+  useEffect(() => {
+    if (snapshot?.interstellar.destinationSystemId && !jumpActive) setRightTab("jump");
+  }, [snapshot?.interstellar.destinationSystemId]);
 
   const send = (command: HelmCommand) => {
     if (canOrder) room?.send("helm_command", command);
@@ -105,15 +124,17 @@ export function HelmPanel({
   const worldSpeed = ship ? length(ship.velocity) : 0;
   const moving = worldSpeed > 0.1;
   const flightStatus = !room || !snapshot ? "AWAITING LINK" :
+    jumpActive ? (jumpPhase === "charging" ? "JUMP CHARGING" : "INTERSTELLAR TRANSIT") :
     !isLocal ? "CRUISE ACTIVE" :
     ship?.emergencyStopping ? "EMERGENCY BRAKING" :
     turnError > 2 ? "TURNING TO COURSE" :
     drift !== null && drift > 12 ? "VELOCITY OFF-AXIS" :
     moving ? "ON COURSE" : "STATIONARY";
   const statusTone = ship?.emergencyStopping ? "alert" :
-    !room || !snapshot ? "muted" : turnError > 2 ? "amber" : "nominal";
+    !room || !snapshot ? "muted" : jumpActive || turnError > 2 ? "amber" : "nominal";
   const targetReady = Boolean(target);
-  const cruiseLabel = !cruise ? "AWAITING NAV LINK" :
+  const cruiseLabel = jumpActive ? (jumpPhase === "charging" ? "JUMP · CHARGING" : "JUMP · TRANSIT") :
+    !cruise ? "AWAITING NAV LINK" :
     cruise.mode === "local" ? "IMPULSE / LOCAL" :
     cruise?.mode === "spooling" ? "FTL · SPOOLING" :
     cruise?.mode === "dropping" ? "FTL · DECELERATING" : "FTL · CRUISE";
@@ -223,7 +244,7 @@ export function HelmPanel({
             <span/><span/><span/><span/>
           </div>
           <div className="helm-viewport-bottom">
-            <span>{showSphere && isLocal && mode === "orbit" ?
+            <span>{showSphere && canOrder && mode === "orbit" ?
               "SELECT ON 3D HEADING SPHERE · THEN ENGAGE" :
               "NAVIGATION CAMERA · SHOW SPHERE TO PICK A COURSE"}</span>
             <span>+X STBD / +Y DORSAL / +Z FWD</span>
@@ -332,8 +353,8 @@ export function HelmPanel({
       <aside className="helm-sidebar helm-situation" aria-label="Drive and navigation situation">
         <section className="helm-module helm-drive-module">
           <ModuleHeader index="04" title="SITUATION / DRIVE"
-            extra={<span className={`helm-minitag ${isLocal ? "nominal" : "amber"}`}>
-              {isLocal ? "LOCAL" : "FTL"}</span>}/>
+            extra={<span className={`helm-minitag ${isLocal && !jumpActive ? "nominal" : "amber"}`}>
+              {jumpActive ? "JUMP" : isLocal ? "LOCAL" : "FTL"}</span>}/>
           <div className="helm-drive-mode">
             <span className="helm-drive-pulse" aria-hidden="true"/>
             <div><small>DRIVE CONFIGURATION</small><strong>{cruiseLabel}</strong></div>
@@ -351,10 +372,15 @@ export function HelmPanel({
               onClick={() => setRightTab("local")}>LOCAL NAV</button>
             <button className={rightTab === "cruise" ? "selected" : ""} aria-pressed={rightTab === "cruise"}
               onClick={() => setRightTab("cruise")}>FTL PLANNER</button>
+            <button className={rightTab === "jump" ? "selected" : ""} aria-pressed={rightTab === "jump"}
+              onClick={() => setRightTab("jump")}>JUMP DRIVE</button>
           </div>
           <div className="helm-situation-content">
             {rightTab === "cruise" ?
               <CruisePanel room={room} snapshot={snapshot} notice={cruiseNotice}/> :
+              rightTab === "jump" ?
+              <InterstellarPanel room={room} snapshot={snapshot} notice={interstellarNotice}
+                openGalacticMap={openGalacticMap}/> :
               <>
                 <div className="helm-subhead">RELATIVE MOTION</div>
                 <FlightMotionGlyph ship={ship}/>
@@ -413,10 +439,17 @@ export function HelmPanel({
         </button>
       </div>
     </footer>
-    {!isLocal && <div className="helm-cruise-lockout" role="status">
-      <span>FTL DRIVE ACTIVE</span> Local impulse orders are suspended.
-      Use the FTL Planner to request a safe drop.
-      <button onClick={() => setRightTab("cruise")}>OPEN PLANNER</button>
+    {(!isLocal || jumpActive) && <div className="helm-cruise-lockout" role="status">
+      {jumpActive ? <>
+        <span>INTERSTELLAR DRIVE ACTIVE</span> Local and cruise orders are locked.
+        {jumpPhase === "charging" ? "Charge cancellation is available in Jump Drive." :
+          "Transit continues to the plotted destination; no mid-jump abort in v1."}
+        <button onClick={() => setRightTab("jump")}>OPEN JUMP DRIVE</button>
+      </> : <>
+        <span>FTL DRIVE ACTIVE</span> Local impulse orders are suspended.
+        Use the FTL Planner to request a safe drop.
+        <button onClick={() => setRightTab("cruise")}>OPEN PLANNER</button>
+      </>}
     </div>}
   </section>;
 }

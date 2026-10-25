@@ -5,8 +5,10 @@ import { Client } from "colyseus.js";
 import { getStarSystem, systemPositionsAt } from "@bridge-sim/shared";
 
 const port = 2570;
+const expectedSystemId = process.argv[2] ?? "aster-reach";
+const expectedSystem = getStarSystem(expectedSystemId);
 const child = spawn(process.execPath, ["packages/server/dist/index.js"], {
-  env: { ...process.env, PORT: String(port), BRIDGE_SYSTEM_ID: "aster-reach" },
+  env: { ...process.env, PORT: String(port), BRIDGE_SYSTEM_ID: expectedSystemId },
   stdio: ["ignore", "pipe", "pipe"],
   detached: process.platform !== "win32"
 });
@@ -48,9 +50,9 @@ try {
     receiveSnapshot(helm), receiveSnapshot(mainScreen)
   ]);
   const system = getStarSystem(helmSnap.universe.systemId);
-  assert.equal(system.id, "aster-reach");
+  assert.equal(system.id, expectedSystemId);
   assert.equal(mainSnap.universe.systemId, system.id);
-  assert.equal(helmSnap.universe.referenceBodyId, system.start.referenceBodyId);
+  assert.equal(helmSnap.universe.referenceBodyId, expectedSystem.start.referenceBodyId);
   assert.ok(Number.isFinite(helmSnap.universe.epochSeconds));
   assert.ok(Number.isFinite(mainSnap.universe.epochSeconds));
   assert.ok(Math.abs(mainSnap.universe.epochSeconds - helmSnap.universe.epochSeconds) < 3);

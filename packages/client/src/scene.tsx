@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import {
-  ArcRotateCamera, Color3, Engine, FreeCamera, MeshBuilder,
+  ArcRotateCamera, Color3, Color4, Engine, FreeCamera, MeshBuilder,
   PointerEventTypes, Quaternion, Scene, StandardMaterial, Vector3
 } from "@babylonjs/core";
 import {
@@ -16,10 +16,37 @@ import { createReferenceStation } from "./celestialScene";
 import { createPlanetaryBackground } from "./planetaryScene";
 import { createSpaceLighting, upgradeShipAppearance } from "./shipLighting";
 import type { SurfaceDetailMode } from "./surfaceDetail";
+import { shouldResetPoseHistory } from "./systemTransition";
 
 export type CameraMode = "orbit" | "chase" | "tactical" | "sector" | "planet";
 type Sample = { snapshot: GameSnapshot; receivedAt: number };
 const INTERPOLATION_DELAY_MS = 115;
+
+/** Development-only visibility into Babylon lifecycle for automated round-trip
+ * testing. The metric is observational: no UI decisions depend on it.
+ */
+export type BridgeRendererDiagnostics = {
+  created: number;
+  disposed: number;
+  active: number;
+  activeSystemId: string | null;
+  activeSkyBodyIds: string[];
+  skyTextures: number;
+  skyMeshes: number;
+  oldSystemSkyBodies: number;
+};
+type DiagnosticWindow = Window & { __bridgeRendererDiagnostics?: BridgeRendererDiagnostics };
+const diagnostics = (): BridgeRendererDiagnostics | null => {
+  if (!import.meta.env.DEV) return null;
+  const w = window as DiagnosticWindow;
+  if (!w.__bridgeRendererDiagnostics) {
+    w.__bridgeRendererDiagnostics = {
+      created: 0, disposed: 0, active: 0, activeSystemId: null,
+      activeSkyBodyIds: [], skyTextures: 0, skyMeshes: 0, oldSystemSkyBodies: 0
+    };
+  }
+  return w.__bridgeRendererDiagnostics;
+};
 
 const toVector = (v: { x: number; y: number; z: number }) => new Vector3(v.x, v.y, v.z);
 const toQuaternion = (q: Quat) => new Quaternion(q.x, q.y, q.z, q.w);
@@ -85,8 +112,7 @@ export function MainScene({
     const previous = samples.at(-1)?.snapshot;
     // Impulse frames are intentionally local; a drop from cruise establishes a
     // new local origin. Never interpolate old-frame and new-frame coordinates.
-    if (previous && (previous.universe.referenceBodyId !== snapshot.universe.referenceBodyId ||
-      previous.cruise.mode === "local" !== (snapshot.cruise.mode === "local"))) {
+    if (previous && shouldResetPoseHistory(previous, snapshot)) {
       samplesRef.current = [];
     }
     const currentSamples = samplesRef.current;
@@ -100,7 +126,19 @@ export function MainScene({
     if (!canvas) return;
     const engine = new Engine(canvas, true);
     const scene = new Scene(engine);
+    const sceneSystemId = latestRef.current?.universe.systemId ?? "awaiting-system";
+    const counters = diagnostics();
+    if (counters) {
+      counters.created++;
+      counters.active++;
+      counters.activeSystemId = sceneSystemId;
+      counters.activeSkyBodyIds = [];
+    }
     const planetarySky = createPlanetaryBackground(engine);
+    // React may tear down this canvas during a system change or station-role
+    // reconnect while Babylon still has a queued animation-frame callback.
+    // Never render an already disposed sky/scene (postProcessManager is null).
+    let rendererDisposed = false;
     // Sky first, then clear depth (but NOT colour) before rendering local
     // ship/station geometry: a projection proxy planet cannot clip a station.
     scene.autoClear = false;
@@ -204,9 +242,17 @@ export function MainScene({
     }, PointerEventTypes.POINTERPICK);
 
     engine.runRenderLoop(() => {
+      if (rendererDisposed) return;
+      const latest = latestRef.current;
+      // In deep interstellar transit there is NO valid metre-valued frame or
+      // astronomical sightline. Do not show the origin system or reuse a stale
+      // orbital texture/ship trail. The cinematic is composited by React.
+      if (latest?.interstellar.phase === "transit") {
+        engine.clear(new Color4(0.003, 0.009, 0.022, 1), true, true, true);
+        return;
+      }
       chooseCamera();
       const pose = interpolatedPose(samplesRef.current, performance.now() - INTERPOLATION_DELAY_MS);
-      const latest = latestRef.current;
       if (pose && latest) {
         // Planet directions must interpolate the astronomical cruise position,
         // not step at the server's 15 Hz snapshot rate. Keep these visual
@@ -225,7 +271,8 @@ export function MainScene({
             }
           }
         };
-        const frameKey = latest.universe.referenceBodyId + ":" +
+        const frameKey = latest.universe.systemId + ":" +
+          latest.universe.referenceBodyId + ":" +
           (latest.cruise.mode === "local" ? "local" : "cruise");
         if (frameKey !== lastRenderFrameKey) {
           lastRenderFrameKey = frameKey;
@@ -343,6 +390,15 @@ export function MainScene({
           propsRef.current.mode !== "tactical",
           propsRef.current.surfaceDetailMode
         );
+        if (counters) {
+          const ids = planetarySky.activeBodyIds();
+          counters.activeSystemId = latest.universe.systemId;
+          counters.activeSkyBodyIds = ids;
+          counters.skyTextures = planetarySky.scene.textures.length;
+          counters.skyMeshes = planetarySky.scene.meshes.length;
+          const activeCatalog = new Set(liveSystem.bodies.map(body => body.id));
+          counters.oldSystemSkyBodies = ids.filter(id => !activeCatalog.has(id)).length;
+        }
         const cruiseSpeed = latest.cruise.speedMetersPerSecond;
         streaks.setEnabled(!local && cruiseSpeed > 5_000);
         if (!local && cruiseSpeed > 5_000) {
@@ -357,13 +413,29 @@ export function MainScene({
     const resize = () => engine.resize();
     window.addEventListener("resize", resize);
     return () => {
+      rendererDisposed = true; // Invalidate queued callbacks before GPU teardown.
       window.removeEventListener("resize", resize);
+      engine.stopRenderLoop();
       if (pickObserver) scene.onPointerObservable.remove(pickObserver);
-      scene.dispose();
+      // Dispose sky and its associated GPU textures/materials before releasing
+      // the engine. The next system owns a new Canvas/WebGL and new star data.
       planetarySky.dispose();
+      scene.dispose();
       engine.dispose();
+      if (counters) {
+        counters.disposed++;
+        counters.active--;
+        if (counters.active === 0) {
+          counters.activeSystemId = null;
+          counters.activeSkyBodyIds = [];
+          counters.skyTextures = 0;
+          counters.skyMeshes = 0;
+          counters.oldSystemSkyBodies = 0;
+        }
+      }
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="scene" aria-label="3D navigation and ship view" />;
+  return <canvas ref={canvasRef} className="scene" aria-label="3D navigation and ship view"
+    data-system-id={snapshot?.universe.systemId ?? "awaiting-system"} />;
 }

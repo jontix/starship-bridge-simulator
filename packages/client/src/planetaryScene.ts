@@ -301,6 +301,12 @@ export function createPlanetaryBackground(engine: Engine) {
     scene: sky,
     update,
     render: () => sky.render(),
-    dispose: () => sky.dispose()
+    activeBodyIds: () => [...globes.keys()],
+    dispose: () => {
+      // All per-world procedural/cached textures and shader materials belong
+      // to this Babylon scene. Never carry them across an interstellar jump.
+      globes.clear();
+      sky.dispose();
+    }
   };
 }
