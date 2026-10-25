@@ -1,0 +1,57 @@
+name: Starship Audio Sound Lab
+on:
+  push:
+    branches: [feature/starship-audio-v1]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-tests:
+    name: Audio Lab build / regressions (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            node: '22'
+          - os: windows-latest
+            node: '24'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm install
+      - run: npm run build
+      - run: npm test
+      - run: node scripts/smoke-server.mjs
+
+  browser-audio:
+    name: Web Audio audition in Chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install
+      - run: npm run audio:fetch
+      - run: npm run build
+      - run: npx playwright install chromium --with-deps
+      - run: node scripts/smoke-sound-lab-browser.mjs
+      - name: Save sound design lab screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: starship-audio-sound-lab
+          path: test-artifacts/sound-lab-*.png
+          if-no-files-found: ignore
+          retention-days: 14

@@ -205,6 +205,9 @@ function App() {
           aria-expanded={showGalacticMap} title="Open the interstellar Galactic Navigation chart">
           GALACTIC MAP <kbd>G</kbd>
         </button>
+        <a className="planet-lab-toplink" href="/sound-lab.html" title="Preview drive sound palettes">
+          <span aria-hidden="true">♫ </span>Sound Lab
+        </a>
         <a className="planet-lab-toplink" href="/planet-lab.html"
           title="Develop and inspect deterministic planetary surface maps">
           <span aria-hidden="true">◉ </span>Planet Lab

@@ -12,7 +12,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         bridge: resolve(projectDir, "index.html"),
-        planetLab: resolve(projectDir, "planet-lab.html")
+        planetLab: resolve(projectDir, "planet-lab.html"),
+        soundLab: resolve(projectDir, "sound-lab.html")
       }
     }
   }

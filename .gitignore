@@ -7,3 +7,6 @@ dist
 # Regenerate from scripts/planet-generator rather than committing binary assets.
 packages/client/src/assets/generated-planets/
 packages/client/public/planet-lab/
+
+# Real-world CC0/public-domain sound recordings fetched locally for audition.
+packages/client/public/sound-lab/recorded/
