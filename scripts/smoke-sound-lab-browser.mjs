@@ -100,7 +100,12 @@ try {
 
   // Pending sequences must not re-trigger when switching/muting.
   await page.getByRole("button", { name: "Charge + Enter" }).click();
+  assert.ok((await state()).activeCues > 0, "Jump charge sweep should be in progress");
   await page.getByRole("button", { name: "Mute / Stop" }).click();
+  await page.waitForFunction(() => !window.__soundLabDebug.state().enabled,
+    null, { timeout: 4000 });
+  assert.equal((await state()).activeCues, 0,
+    "Mute must discard old charge cues rather than replay them after unmute");
   assert.equal((await state()).enabled, false);
   assert.equal((await state()).scene, "standby");
   await delay(700);
