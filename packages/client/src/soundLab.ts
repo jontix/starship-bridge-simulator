@@ -50,6 +50,15 @@ enable.addEventListener("click", async () => {
     await engine.enable();
     disabledControls(false);
     describe("standby", "Audio enabled. Thrusters are quiet until you preview thrust.");
+    const recordingInfo = engine.state.recordings;
+    const tag = byId<HTMLParagraphElement>("recorded-status");
+    const found = recordingInfo.ready;
+    const missing = recordingInfo.missing;
+    tag.textContent = found.length
+      ? "Recorded foley loaded: " + found.join(", ") +
+        ". " + (missing.length ? "Missing: " + missing.join(", ") +
+        ". Run npm run audio:fetch; optional capacitor recording needs a manual CC0 download." : "All five recorded layers available.")
+      : "No recorded foley installed. Run npm run audio:fetch from the project root and reload this page; otherwise you hear the older synthesised fallback.";
   } catch (error) {
     status.textContent = "Could not start audio: " + String(error);
     disabledControls(true);
