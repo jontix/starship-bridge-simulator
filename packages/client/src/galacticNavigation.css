@@ -85,6 +85,32 @@
 .jump-readiness {margin:2px 0;font-size:10px;color:#a5d4d6;line-height:1.5;}
 .jump-notice {margin:2px 0;padding:8px;border:1px solid #406975;border-radius:6px;color:#d9f3ef;font-size:10px;line-height:1.5;}
 .jump-stage-warning {font-size:10px;color:#c8ac80;border-top:1px solid #3e5d68;padding-top:8px;line-height:1.5;}
+/* Glanceable Main Screen HUD, separate from the scrollable camera/settings panel. */
+.interstellar-banner {
+  position:absolute;top:18px;right:18px;z-index:8;
+  width:min(410px,calc(100% - 36px));padding:17px 19px;
+  border:1px solid #4c8191;border-radius:12px;
+  background:linear-gradient(140deg,rgba(7,31,45,.97),rgba(7,20,36,.95));
+  color:#dcefff;box-shadow:0 12px 40px #0008;
+  pointer-events:none;
+}
+.interstellar-banner-head {display:flex;flex-direction:column;gap:5px;padding-bottom:11px;border-bottom:1px solid #3d6675;}
+.interstellar-banner-head span {font-size:11px;letter-spacing:.15em;font-weight:800;color:#87e3ec;}
+.interstellar-banner-head strong {font-size:22px;letter-spacing:.05em;color:#f1fdff;}
+.interstellar-banner-facts {display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:14px 0;}
+.interstellar-banner-facts>div {display:flex;flex-direction:column;gap:5px;min-width:0;}
+.interstellar-banner-facts span {font-size:9px;letter-spacing:.1em;color:#7eb4c8;}
+.interstellar-banner-facts strong {font-size:12px;color:#e6faff;font-variant-numeric:tabular-nums;}
+.interstellar-banner-progress-titles {display:flex;justify-content:space-between;font-size:10px;letter-spacing:.09em;color:#9cd9e2;margin-bottom:6px;}
+.interstellar-banner-progress-titles strong {color:#a0f5e4;}
+.interstellar-banner p {font-size:11px;color:#b6e0e7;margin:6px 0 9px;}
+.interstellar-banner small {display:block;margin-top:10px;color:#93b3c2;font-size:10px;line-height:1.5;}
+@media(max-width:680px) {
+  .interstellar-banner {top:auto;bottom:12px;right:10px;width:min(340px,calc(100% - 20px));padding:10px 12px;}
+  .interstellar-banner-head strong {font-size:17px;}
+  .interstellar-banner-facts {margin:9px 0;}
+}
+
 .main-panel .interstellar-readout {margin:8px 0 14px;}
 .main-panel .jump-metric {flex-wrap:wrap;}
 .main-panel .jump-metric strong {font-size:11px;}
