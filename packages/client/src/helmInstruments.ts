@@ -1,5 +1,6 @@
 import {
   attitudeFromQuat, directionToHeading, dot, length, rotateVector, vec3,
+  quatFromAttitude, rotationError,
   type ShipState, type Vec3
 } from "@bridge-sim/shared";
 
@@ -61,13 +62,10 @@ export function isHeadingDraftCommitted(draft: HelmDraftHeading, ship: ShipState
 }
 
 export function headingErrorDegrees(ship: ShipState): number {
-  const actual = currentHeadingFromShip(ship);
-  const desired = orderedHeadingFromShip(ship);
-  return Math.hypot(
-    bearingDistance(actual.yaw, desired.yaw),
-    actual.pitch - desired.pitch,
-    bearingDistance(actual.roll, desired.roll)
-  );
+  // True shortest 6DOF quaternion rotation; Euler axis differences can
+  // overstate error near ±180 degrees or at steep pitch.
+  const ordered = quatFromAttitude(ship.desiredYaw, ship.desiredPitch, ship.desiredRoll);
+  return rotationError(ship.orientation, ordered).radians * 180 / Math.PI;
 }
 
 /** World-space motion is different from the ship's forward velocity.
