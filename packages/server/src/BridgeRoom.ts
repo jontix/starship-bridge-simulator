@@ -1,7 +1,7 @@
 import { Room, Client } from "colyseus";
 import {
   applyHelmCommand, createInitialShipState, HelmCommandSchema,
-  RoleSchema, stepShip, DEFAULT_SYSTEM_ID, getStarSystem, validateStarSystem,
+  RoleSchema, stepShip, DEFAULT_SYSTEM_ID, getStarSystem, validateStarCatalog,
   beginCruise, createCruiseState, CruiseCommandSchema, requestCruiseDrop,
   selectCruiseTarget, setCruiseThrottle, stepCruise, systemPositionOfShip,
   type CruiseState, type GameSnapshot, type LocalFrame,
@@ -68,7 +68,7 @@ export class BridgeRoom extends Room {
   }
 
   onCreate(): void {
-    validateStarSystem(this.starSystem);
+    validateStarCatalog();
     console.log("Bridge room in star system " + this.starSystem.name + " (" + this.starSystem.id + ")");
 
     this.cruise.positionSystemMeters = systemPositionOfShip(
