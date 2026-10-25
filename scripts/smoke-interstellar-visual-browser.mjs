@@ -112,13 +112,18 @@ try {
         timeout: 10000 }).catch(() => undefined);
       throw error;
     }
+    let rendererHandle;
     try {
-      await page.waitForFunction(
+      // Capture all counters atomically on the first frame that satisfies
+      // the invariant. SwiftShader + reconnect can remount between separate
+      // browser calls; a second live read would inspect a different frame.
+      rendererHandle = await page.waitForFunction(
         ({ id, primary }) => {
           const c = window.__bridgeRendererDiagnostics;
-          return c && c.active === 1 && c.created - c.disposed === 1 &&
-            c.activeSystemId === id && c.activeSkyBodyIds.includes(primary) &&
-            c.oldSystemSkyBodies === 0 && c.skyMeshes > 0;
+          if (!c || c.active !== 1 || c.created - c.disposed !== 1 ||
+              c.activeSystemId !== id || !c.activeSkyBodyIds.includes(primary) ||
+              c.oldSystemSkyBodies !== 0 || c.skyMeshes <= 0) return false;
+          return { ...c, activeSkyBodyIds: [...c.activeSkyBodyIds] };
         }, { id: systemId, primary: primaryId }, { timeout: 40000 }
       );
     } catch (error) {
@@ -134,7 +139,7 @@ try {
         timeout: 10_000 }).catch(() => undefined);
       throw error;
     }
-    const metrics = await page.evaluate(() => ({ ...window.__bridgeRendererDiagnostics }));
+    const metrics = await rendererHandle.jsonValue();
     assert.ok(metrics.skyTextures < 140, "Sky texture count potentially leaking: " + JSON.stringify(metrics));
     assert.equal(metrics.active, 1);
     assert.equal(metrics.created - metrics.disposed, 1);
@@ -200,13 +205,18 @@ try {
     "Stale Umbra telescope focus must reset at arrival");
   assert.ok(aster1.created > vesper1.created && aster1.disposed > vesper1.disposed);
 
-  // Switch the browser station role without changing the authoritative ship.
+  // Finish the four-voyage stress test on the same Main Screen rendering
+  // session; changing the displayed station mid-flight adds an unrelated
+  // Colyseus handshake and extra WebGL contexts under SwiftShader.
+  await jumpTo("vesper", "vesper-primary", "vesper-arrival-2");
+  const last = await jumpTo("aster-reach", "aster", "aster-return-2");
+
+  // Check the same ship from Helm AFTER repeated round trips. Role switching
+  // itself is still exercised, but it cannot mask scene-handoff defects.
   await page.locator("header .role-select select").selectOption("helm");
   await page.getByText("Connected · Helm").waitFor({ timeout: 25000 });
   await page.getByRole("region", { name: "Helm workstation" }).waitFor();
   await assertRenderer("aster-reach", "aster", "aster-helm-joined");
-  await jumpTo("vesper", "vesper-primary", "vesper-arrival-2");
-  const last = await jumpTo("aster-reach", "aster", "aster-return-2");
   assert.equal(last.active, 1);
   assert.equal(last.created - last.disposed, 1);
   assert.equal(errors.length, 0, "WebGL/browser exceptions: " + errors.join("\n"));
