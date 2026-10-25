@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc",
-    "test": "tsx --test src/simulation.test.ts src/cruise.test.ts src/planet-geometry.test.ts src/universe/interstellar.test.ts"
+    "test": "tsx --test src/simulation.test.ts src/cruise.test.ts src/planet-geometry.test.ts src/universe/interstellar.test.ts src/universe/interstellar-drive.test.ts"
   },
   "dependencies": {
     "zod": "^3.24.4"
