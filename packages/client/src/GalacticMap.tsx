@@ -154,7 +154,7 @@ export function GalacticMap({
             MAIN SCREEN · READ ONLY. Helm controls interstellar route plotting and jump engagement.
           </div>}
           <div className="galactic-stage-note">
-            Visual system handoff remains Stage D. The server already controls destination and arrival.
+            Voyages switch to a freshly rebuilt destination star scene on server-confirmed arrival. No galactic metre coordinates are rendered.
           </div>
         </aside>
       </div>
