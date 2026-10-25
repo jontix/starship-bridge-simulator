@@ -95,13 +95,19 @@ export function HelmPanel({
   // Change the visible right-side mode when the drive actually changes,
   // but do not fight players clicking the tabs to inspect cruise planning.
   useEffect(() => {
-    const drive = jumpActive ? "jump-" + jumpPhase : cruise?.mode;
+    const drive = jumpActive ? "jump-" + jumpPhase :
+      cruise?.mode !== "local" ? cruise?.mode :
+      snapshot?.interstellar.destinationSystemId || snapshot?.interstellar.lastArrivalSystemId ?
+        "jump-plotted" : "local";
     if (!drive) return;
     if (drive !== previousDriveMode.current) {
       previousDriveMode.current = drive;
-      setRightTab(jumpActive ? "jump" : drive === "local" ? "local" : "cruise");
+      // A cancelled charge retains the plotted jump. Keep that console open
+      // rather than returning to LOCAL NAV and hiding the re-engage action.
+      setRightTab(drive.startsWith("jump") ? "jump" : drive === "local" ? "local" : "cruise");
     }
-  }, [cruise?.mode, jumpActive, jumpPhase]);
+  }, [cruise?.mode, jumpActive, jumpPhase,
+      snapshot?.interstellar.destinationSystemId, snapshot?.interstellar.lastArrivalSystemId]);
   useEffect(() => {
     if (snapshot?.interstellar.destinationSystemId && !jumpActive) setRightTab("jump");
   }, [snapshot?.interstellar.destinationSystemId]);
