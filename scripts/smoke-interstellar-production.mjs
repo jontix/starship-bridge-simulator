@@ -58,6 +58,9 @@ function track(history, s) {
 async function join(role, assign, history) {
   const room = await client.joinOrCreate("bridge", { role });
   room.onMessage("snapshot", snap => { assign(snap); track(history, snap); });
+  room.onMessage("interstellar_notice", () => {
+    // This acceptance test validates outcomes from authoritative snapshots.
+  });
   return room;
 }
 async function plotAndEngage(dest) {
