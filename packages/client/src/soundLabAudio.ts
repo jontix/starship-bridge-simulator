@@ -1,3 +1,4 @@
+import { CinematicDriveEffects, type DesignCue } from "./cinematicDriveEffects";
 /**
  * Starship Audio v1 — standalone, browser-only sound-design instrument.
  *
@@ -37,7 +38,7 @@ export class StarshipSoundEngine {
     master: 0.38, intensity: 0.55, texture: 0.35, evolution: 0.3
   };
   private cues = 0;
-  private activeCues = new Set<OscillatorNode>();
+  private effects: CinematicDriveEffects | null = null;
 
   get state() {
     return {
@@ -46,7 +47,8 @@ export class StarshipSoundEngine {
       scene: this.scene,
       ...this.controls,
       cuesPlayed: this.cues,
-      activeCues: this.activeCues.size,
+      activeCues: this.effects?.activeCount ?? 0,
+      passBys: this.effects?.passCount ?? 0,
       activeVoices: this.voices ? Object.entries(this.voices)
         .filter(([, voice]) => voice.bus.gain.value > 0.001)
         .map(([name]) => name) : []
@@ -63,12 +65,7 @@ export class StarshipSoundEngine {
 
   async disable(): Promise<void> {
     if (this.context) {
-      // Remove in-flight sweeps before suspending: otherwise an old jump
-      // charge could continue when the user enables audio again.
-      for (const sound of this.activeCues) {
-        try { sound.stop(); } catch { /* already ended */ }
-      }
-      this.activeCues.clear();
+      this.cancelCues();
       this.scene = "standby";
       this.refresh();
       await this.context.suspend();
@@ -85,54 +82,20 @@ export class StarshipSoundEngine {
     this.refresh();
   }
 
-  /**
-   * A short transient played only on explicit preview transitions.
-   * Reconnecting to a live server is never allowed to replay these by itself.
-   */
-  cue(kind: "ftl-charge" | "ftl-engage" | "ftl-drop" |
-    "jump-charge" | "jump-engage" | "jump-arrive" | "thruster"): void {
-    const ctx = this.context;
-    const master = this.master;
-    if (!ctx || !master || ctx.state !== "running") return;
+  /** Preview-only transient. No server state or duplicate network playback. */
+  cue(kind: DesignCue): void {
+    if (this.context?.state !== "running" || !this.effects) return;
     this.cues++;
-    const now = ctx.currentTime;
-    const settings: Record<typeof kind, [number, number, number, number]> = {
-      "thruster": [290, 90, 0.24, 0.10],
-      "ftl-charge": [105, 370, 4.0, 0.065],
-      "ftl-engage": [620, 130, 0.72, 0.10],
-      "ftl-drop": [340, 75, 1.0, 0.095],
-      "jump-charge": [48, 240, 6.0, 0.10],
-      "jump-engage": [170, 38, 1.45, 0.16],
-      "jump-arrive": [125, 590, 1.8, 0.095]
-    };
-    const [from, to, duration, maxGain] = settings[kind];
-    const osc = ctx.createOscillator();
-    osc.type = kind.startsWith("jump") ? "sawtooth" : "triangle";
-    osc.frequency.setValueAtTime(from, now);
-    osc.frequency.exponentialRampToValueAtTime(Math.max(to, 1), now + duration);
-    const filter = ctx.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.frequency.setValueAtTime(kind.startsWith("jump") ? 440 : 1200, now);
-    filter.frequency.exponentialRampToValueAtTime(kind === "jump-arrive" ? 2100 : 630, now + duration);
-    const envelope = ctx.createGain();
-    envelope.gain.setValueAtTime(0.0001, now);
-    envelope.gain.exponentialRampToValueAtTime(maxGain, now + Math.min(0.25, duration * 0.3));
-    envelope.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-    osc.connect(filter).connect(envelope).connect(master);
-    this.activeCues.add(osc);
-    osc.start(now);
-    osc.stop(now + duration + 0.02);
-    osc.onended = () => {
-      this.activeCues.delete(osc);
-      osc.disconnect(); filter.disconnect(); envelope.disconnect();
-    };
+    this.effects.cue(kind);
+  }
+
+  cancelCues(): void {
+    this.effects?.stopAll();
   }
 
   async dispose(): Promise<void> {
-    for (const sound of this.activeCues) {
-      try { sound.stop(); } catch { /* already ended */ }
-    }
-    this.activeCues.clear();
+    this.cancelCues();
+    this.effects = null;
     const ctx = this.context;
     this.context = null;
     this.master = null;
@@ -155,6 +118,7 @@ export class StarshipSoundEngine {
     master.gain.value = 0;
     master.connect(compressor);
     this.master = master;
+    this.effects = new CinematicDriveEffects(ctx, master);
 
     // Deterministic soft noise texture reused by all three propulsion beds.
     const samples = Math.round(ctx.sampleRate * 2);
@@ -203,9 +167,9 @@ export class StarshipSoundEngine {
     };
 
     this.voices = {
-      local: makeVoice([[55, "sine", 0.13], [110, "triangle", 0.035], [83, "sine", 0.02]], 490, 280),
-      ftl: makeVoice([[110, "sine", 0.06], [165, "triangle", 0.05], [220, "sine", 0.03], [330, "sine", 0.018]], 1350, 1750),
-      jump: makeVoice([[55, "sine", 0.07], [82.5, "sine", 0.055], [110, "triangle", 0.026], [165, "sine", 0.014]], 740, 900)
+      local: makeVoice([[42, "sawtooth", 0.22], [63, "sine", 0.17], [85, "sawtooth", 0.07]], 400, 140),
+      ftl: makeVoice([[110, "sawtooth", 0.06], [116.4, "triangle", 0.07], [157.3, "sawtooth", 0.035], [231, "sine", 0.04]], 960, 1600),
+      jump: makeVoice([[48, "sine", 0.09], [70.5, "sawtooth", 0.032], [103.7, "triangle", 0.036], [156.5, "sine", 0.012]], 690, 760)
     };
     // Each advanced drive has a genuinely evolving sound even if nobody
     // touches the sliders. Sub-audio modulators add slow spectral motion.
@@ -244,15 +208,15 @@ export class StarshipSoundEngine {
     for (const key of ["local", "ftl", "jump"] as const) {
       glide(this.voices[key].bus.gain, gains[key], now, 0.13);
     }
-    glide(this.voices.local.filter.frequency, 160 + c.intensity * 1050, now);
-    glide(this.voices.ftl.filter.frequency, 650 + c.intensity * 1800, now);
-    glide(this.voices.jump.filter.frequency, 390 + c.evolution * 1100, now, 0.18);
-    glide(this.voices.local.noise.gain, c.texture * (0.016 + c.intensity * 0.065), now);
-    glide(this.voices.ftl.noise.gain, c.texture * 0.042, now);
-    glide(this.voices.jump.noise.gain, c.texture * (0.024 + c.evolution * 0.075), now);
+    glide(this.voices.local.filter.frequency, 140 + c.intensity * 480, now);
+    glide(this.voices.ftl.filter.frequency, 370 + c.intensity * 1400, now);
+    glide(this.voices.jump.filter.frequency, 290 + c.evolution * 780, now, 0.18);
+    glide(this.voices.local.noise.gain, c.texture * (0.08 + c.intensity * 0.19), now);
+    glide(this.voices.ftl.noise.gain, c.texture * 0.07, now);
+    glide(this.voices.jump.noise.gain, c.texture * (0.03 + c.evolution * 0.08), now);
     const t = this.voices.jump.tones;
     // Harmonic evolution, not a continuously rising loudness.
-    glide(t[1].frequency, 82.5 * (1 + c.evolution * 0.16), now, 0.35);
-    glide(t[3].frequency, 165 * (1 - c.evolution * 0.09), now, 0.35);
+    glide(t[1].frequency, 70.5 * (1 + c.evolution * 0.16), now, 0.35);
+    glide(t[3].frequency, 156.5 * (1 - c.evolution * 0.09), now, 0.35);
   }
 }
