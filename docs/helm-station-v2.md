@@ -11,7 +11,7 @@ Babylon.js, Colyseus authoritative flight and interplanetary cruise intact.
 | Area | Components/files | Behaviour |
 |---|---|---|
 | Main station | `HelmPanel.tsx`, `helmStation.css` | Full-screen, 3-zone workstation and always-visible bottom telemetry instead of a single long scrolling panel |
-| Navigation | `HelmInstruments.tsx`, `helmInstruments.ts` | Interactive bearing dial with selected, ordered, actual bow and inertial velocity markers; compact yaw/pitch/roll steppers and 3D heading sphere |
+| Navigation | `HelmWidgets.tsx`, `helmInstruments.ts` | Interactive bearing dial with selected, ordered, actual bow and inertial velocity markers; compact yaw/pitch/roll steppers and 3D heading sphere |
 | Helm orders | `HelmPanel.tsx` | Separate draft heading, speed and lateral/vertical commands with explicit Engage buttons; impulse presets, axis pad and emergency braking |
 | Situational panel | `HelmPanel.tsx`, existing `CruisePanel.tsx` | Mode, target, reference body, range/ETA, local drift, beacon contacts; FTL planner in a secondary tab |
 | Display setup | `HelmPanel.tsx`, `PlanetReadout.tsx` | Camera/planet visuals moved under advanced settings; controls remain functional |
