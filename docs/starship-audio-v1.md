@@ -1,4 +1,17 @@
-# Starship Audio v1 — visceral cinematic Sound Lab (auditions 02)
+# Starship Audio v1 — recorded-foley Sound Lab (audition pass 03)
+
+## Current sample-led prototype
+
+The previous procedural noise/oscillator imitations did not sound convincingly physical. This pass layers **four real CC0/public-domain recordings** onto the separate browser Sound Lab: wind/ocean low rumble for thruster mass, glass break for FTL engagement, actual rain-and-thunder for corridor entry/exit, and a moving-car sample for stereo Doppler-like pass-bys.
+
+**Before listening:** run `npm.cmd run audio:fetch` in PowerShell from the project root, then `npm.cmd run dev` and open `http://localhost:5173/sound-lab.html`. The page reports which recordings were successfully decoded. Binary recordings are downloaded locally and ignored by Git; see [full sources, licensing and optional recorded camera-flash instructions](recorded-audio-sources.md).
+
+The flash-capacitor charging whine stays synthesised **until the user provides an optional CC0 camera-flash WAV recording**. Freesound authenticates its original downloads; the application does not bypass that requirement. The sources page links verified real flash recordings.
+
+The Sound Lab remains separate from ship physics, Colyseus and the multiplayer rooms. No sound plays before the user clicks Enable Audio. `main` remains unchanged.
+
+## Original creative brief and audition sequence
+
 
 ## Creative direction
 
