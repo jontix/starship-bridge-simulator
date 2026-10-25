@@ -89,6 +89,10 @@ try {
   assert.equal((await state()).scene, "jump-charge");
   await page.waitForFunction(() => window.__soundLabDebug.state().scene === "jump-transit",
     null, { timeout: 9000 });
+  await page.waitForFunction(() => window.__soundLabDebug.state().passBys >= 1,
+    null, { timeout: 5000 });
+  assert.equal((await state()).scene, "jump-transit",
+    "Thunder engagement must lead into corridor traffic, not restart the jump");
   await changeSlider("evolution", 82);
   assert.equal((await state()).evolution, 0.82);
   await page.screenshot({ path: join(outputDir, "sound-lab-jump-transit.png"), fullPage: true });
@@ -97,6 +101,17 @@ try {
   await page.waitForFunction(() => window.__soundLabDebug.state().scene === "local",
     null, { timeout: 3500 });
   assert.ok((await state()).cuesPlayed >= 6);
+
+  // Complete audition in real wall-clock time: 6s charge, 15s corridor,
+  // uneven fast pass-bys, then automatic thunderous arrival into local space.
+  const passesBefore = (await state()).passBys;
+  await page.getByRole("button", { name: "Charge + Enter" }).click();
+  await page.waitForFunction(() => window.__soundLabDebug.state().scene === "jump-transit",
+    null, { timeout: 9000 });
+  await page.waitForFunction(() => window.__soundLabDebug.state().scene === "local",
+    null, { timeout: 22000 });
+  assert.ok((await state()).passBys >= passesBefore + 7,
+    "Seven irregular stereo pass-bys should play before automatic arrival");
 
   // Pending sequences must not re-trigger when switching/muting.
   await page.getByRole("button", { name: "Charge + Enter" }).click();
@@ -116,7 +131,7 @@ try {
     null, { timeout: 5000 });
   assert.equal((await state()).scene, "local");
   assert.deepEqual(exceptions, [], "Browser exceptions: " + exceptions.join("\n"));
-  console.log("Starship Sound Lab Chromium PASS: no autoplay; Web Audio graph; local, FTL 4s spool/dropout; jump 6s charge/transit/arrival; live mix; mute/reset");
+  console.log("Starship Sound Lab Chromium PASS: no autoplay; Web Audio; rumble, capacitor/glass FTL, thunder with 7 irregular Doppler pass-bys and auto-arrival; 4s/6s spool; mix, mute/reset");
   await context.close();
 } finally {
   if (browser) await browser.close();
