@@ -119,7 +119,8 @@ try {
   }
 
   const initial = await assertRenderer("aster-reach", "aster", "aster-start");
-  assert.equal(initial.disposed, 1, "Placeholder system renderer should be disposed on first snapshot");
+  assert.equal(initial.created, 1, "No placeholder Babylon/WebGL renderer before the first server snapshot");
+  assert.equal(initial.disposed, 0, "No initialization-time GPU teardown");
 
   async function jumpTo(destinationId, destinationPrimary, label) {
     const from = ship.universe.systemId;
