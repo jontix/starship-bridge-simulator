@@ -1,0 +1,55 @@
+name: Interstellar Stage E acceptance
+on:
+  push:
+    branches: [feature/interstellar-travel-v1]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  production-speed-multiplayer:
+    name: Full-speed multiplayer / reconnect (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            node: '22'
+          - os: windows-latest
+            node: '24'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm install
+      - run: npm run build
+      - run: node scripts/smoke-interstellar-production.mjs
+
+  chromium-production-voyage:
+    name: Full-speed Helm and Main Screen / reload
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install
+      - run: npm run build
+      - run: npx playwright install chromium --with-deps
+      - run: node scripts/smoke-interstellar-acceptance-browser.mjs
+      - name: Upload Stage E screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: interstellar-stage-e-acceptance-screenshots
+          path: test-artifacts/stage-e-*.png
+          if-no-files-found: ignore
+          retention-days: 14
