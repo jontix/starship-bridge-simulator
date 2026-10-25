@@ -38,7 +38,7 @@ export function MainScreenPanel({
         {showAids ? "Hide navigation overlays" : "Show navigation overlays"}
       </button>
       <div className="telemetry-grid">
-        <Telemetry label="World speed" value={snapshot?.interstellar.phase !== "idle" ? "JUMP DRIVE" :
+        <Telemetry label="World speed" value={snapshot?.interstellar.phase && snapshot.interstellar.phase !== "idle" ? "JUMP DRIVE" :
           ship && snapshot?.cruise.mode === "local" ? number(length(ship.velocity)) + " m/s" : "CRUISE"} />
         <Telemetry label="Drift angle" value={ship ? driftAngle(ship) : "—"} />
       </div>
