@@ -11,6 +11,7 @@ import { SystemMap } from "./SystemMap";
 import { CruiseStatusBanner } from "./CruisePanel";
 import type { PickedHeading, SelectedHeading } from "./navigationVisuals";
 import "./styles.css";
+import "./helmStation.css";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL ?? `ws://${window.location.hostname}:2567`;
 
@@ -147,7 +148,20 @@ function App() {
         </a>
         <label className="role-select">
           Station
-          <select value={role} onChange={(event) => setRole(event.target.value as PlayerRole)}>
+          <select value={role} onChange={(event) => {
+            const nextRole = event.target.value as PlayerRole;
+            setRole(nextRole);
+            // Helm opens at a flyable navigation orientation, not the orbital
+            // panorama used by the Main Screen. The 3D heading sphere is live.
+            if (nextRole === "helm") {
+              setCameraMode("orbit");
+              setShowHeadingSphere(true);
+              setShowNavigationAids(true);
+            } else {
+              setCameraMode("planet");
+              setShowHeadingSphere(false);
+            }
+          }}>
             <option value="main-screen">Main Screen</option>
             <option value="helm">Helm</option>
           </select>
@@ -229,21 +243,11 @@ function App() {
             <button onClick={() => setOpticalZoom(1)}>Return to 1× panorama</button>
           </div>
         )}
-        <CruiseStatusBanner snapshot={snapshot}/>
+        {role !== "helm" && <CruiseStatusBanner snapshot={snapshot}/>}
         <div className="scene-caption">
           {liveSystem.name.toUpperCase()} · {snapshot?.cruise.mode === "local" ? "LOCAL" : "INTERPLANETARY"} ·
           FRAME: {(snapshot?.universe.referenceBodyId ?? liveSystem.start.referenceBodyId).toUpperCase()} · 30 HZ
         </div>
-        {role === "helm" && showHeadingSphere && snapshot?.cruise.mode === "local" && !showSystemMap && (
-          <div className="nav-legend" aria-label="Heading sphere legend">
-            <strong>WORLD HEADING SPHERE</strong>
-            <span><i className="swatch preview" /> Cyan · selected (not sent)</span>
-            <span><i className="swatch ordered" /> Amber · ordered heading</span>
-            <span><i className="swatch bow" /> White · actual bow</span>
-            <span><i className="swatch velocity" /> Green · velocity vector</span>
-            <small>Drag to orbit · click sphere to select · Set attitude to engage</small>
-          </div>
-        )}
         {showSystemMap && <SystemMap
           snapshot={snapshot}
           onClose={() => setShowSystemMap(false)}
