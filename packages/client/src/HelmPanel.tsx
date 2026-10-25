@@ -297,13 +297,13 @@ export function HelmPanel({
                   <div><input type="number" aria-label="Strafe order" min={-60} max={60} step={1}
                     value={strafe} onChange={event => setStrafe(clampHelmTranslation(Number(event.target.value)))}/>
                     <span>m/s</span></div>
-                  <small>Actual {motion ? sign(motion.strafe, 1) : "—"} m/s</small>
+                  <small>Actual {motion ? sign(motion.strafe, 1) : "—"} · ordered {ship ? sign(ship.desiredStrafe, 0) : "—"} m/s</small>
                 </label>
                 <label>LIFT / ORDER <span>+ DORSAL</span>
                   <div><input type="number" aria-label="Lift order" min={-60} max={60} step={1}
                     value={lift} onChange={event => setLift(clampHelmTranslation(Number(event.target.value)))}/>
                     <span>m/s</span></div>
-                  <small>Actual {motion ? sign(motion.lift, 1) : "—"} m/s</small>
+                  <small>Actual {motion ? sign(motion.lift, 1) : "—"} · ordered {ship ? sign(ship.desiredLift, 0) : "—"} m/s</small>
                 </label>
               </div>
             </div>
