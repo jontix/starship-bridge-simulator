@@ -176,6 +176,76 @@ try {
     "Unobstructed 32x Aster telescope failed to show a stellar disc; warm pixels=" +
     warmDiscPixels);
   console.log("Captured resolved Aster stellar disc:", star, "warm pixels=", warmDiscPixels);
+  // Helm v2 real-server acceptance: the 3D space view stays interactive
+  // under a full-width bridge workstation. All orders use the existing
+  // Colyseus helm_command wire protocol, NOT mocked browser state.
+  await page.locator("header .role-select select").selectOption("helm");
+  await page.getByText("Connected · Helm").waitFor({timeout:30_000});
+  await page.getByRole("region",{name:"Helm workstation"}).waitFor({timeout:20_000});
+  await page.getByRole("slider",{name:"Select world bearing"}).waitFor();
+  await page.getByRole("button",{name:"NAV AIDS OFF"}).waitFor({
+    timeout:10000
+  }); // The 2.8km world grid must not obscure Helm's heading sphere by default.
+  await page.getByRole("button",{name:/ENGAGE HEADING/}).waitFor();
+  await page.getByRole("button",{name:/EMERGENCY BRAKE/}).waitFor();
+
+  // The user must explicitly engage a preview. Clicking the bearing dial
+  // changes the local draft without mutating the server-side order.
+  const dial=page.getByRole("slider",{name:"Select world bearing"});
+  await dial.click({position:{x:155,y:40}});
+  await page.getByText("PREVIEW ONLY — NOT SENT TO SHIP").waitFor({timeout:10_000});
+  await page.getByRole("button",{name:/ENGAGE HEADING/}).click();
+  await page.getByText("SELECTED HEADING MATCHES ORDER").waitFor({timeout:12_000});
+
+  // Impulse presets prepare a command; Engage sends it to the real server.
+  await page.getByRole("button",{name:"APPROACH",exact:true}).click();
+  assert.equal(await page.getByText("ORDER PREVIEW").locator("..").locator("strong").textContent(),
+    "60m/s");
+  await page.getByRole("button",{name:/ENGAGE SPEED ORDER/}).click();
+  await page.getByText("ORDERED FORWARD").locator("..").getByText("60 m/s").waitFor({
+    timeout:12000
+  });
+
+  // Six-degree-of-freedom translation has independent server-backed axes.
+  await page.getByRole("button",{name:"Increase starboard strafe"}).click();
+  await page.getByRole("button",{name:"ENGAGE VECTOR"}).click();
+  await page.getByText(/ordered \+5 m\/s/).first().waitFor({timeout:12000});
+
+  const helmScreenshot=join(screenshots,"helm-console-v2.png");
+  await sleep(900);
+  await page.screenshot({path:helmScreenshot,fullPage:true,animations:"disabled"});
+  // At desktop width, 3 workstation columns and the persistent emergency
+  // strip must be visible at the same time, without an outer long-scroll form.
+  const geometry=await page.evaluate(()=>{
+    const selectors=[".helm-navigation",".helm-center",".helm-situation",
+      ".helm-flight-strip",".helm-viewport"];
+    return selectors.map(selector=>{
+      const element=document.querySelector(selector);
+      if(!element) return null;
+      const b=element.getBoundingClientRect();
+      return {left:b.left,right:b.right,top:b.top,bottom:b.bottom,
+        width:b.width,height:b.height};
+    });
+  });
+  assert.ok(geometry.every(Boolean),"Missing Helm v2 layout regions: "+JSON.stringify(geometry));
+  assert.ok(geometry[0].right < geometry[1].left &&
+    geometry[1].right < geometry[2].left,"Helm workstation columns overlap");
+  assert.ok(geometry[3].bottom <= 900 && geometry[3].top > geometry[4].top,
+    "Persistent telemetry strip outside viewport");
+
+  // Emergency brake is real acceleration-limited braking, not an instantaneous
+  // velocity reset. It must cancel authoritative ordered movement.
+  await page.getByRole("button",{name:/EMERGENCY BRAKE/}).click();
+  await page.getByText("ORDERED FORWARD").locator("..").getByText("0 m/s").waitFor({
+    timeout:12000
+  });
+  await page.getByRole("button",{name:"FTL PLANNER"}).click();
+  await page.getByText("Interplanetary cruise", {exact:true}).waitFor({timeout:10000});
+  assert.equal(shaderFailures.length,0,"Helm Babylon shader errors:\\n"+shaderFailures.join("\\n"));
+  assert.equal(runtimeErrors.length,0,"Helm browser errors:\\n"+runtimeErrors.join("\\n"));
+  console.log("Captured functional Helm workstation:",helmScreenshot);
+  console.log("Helm browser smoke passed: preview/engage separation, speed, 6DOF trim, brake and 3-column layout");
+
   await context.close();
   console.log("Planetary browser smoke passed: both shaders, connected multiplayer session, valid WebGL and screenshots");
 } catch (error) {
