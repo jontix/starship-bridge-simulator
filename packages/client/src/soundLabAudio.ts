@@ -1,4 +1,5 @@
 import { CinematicDriveEffects, type DesignCue } from "./cinematicDriveEffects";
+import { RecordedDriveAudio } from "./recordedDriveAudio";
 /**
  * Starship Audio v1 — standalone, browser-only sound-design instrument.
  *
@@ -39,6 +40,7 @@ export class StarshipSoundEngine {
   };
   private cues = 0;
   private effects: CinematicDriveEffects | null = null;
+  private recorded: RecordedDriveAudio | null = null;
 
   get state() {
     return {
@@ -49,6 +51,7 @@ export class StarshipSoundEngine {
       cuesPlayed: this.cues,
       activeCues: this.effects?.activeCount ?? 0,
       passBys: this.effects?.passCount ?? 0,
+      recordings: this.recorded?.status ?? { ready: [], missing: [], errors: [], active: 0, playedCars: 0 },
       activeVoices: this.voices ? Object.entries(this.voices)
         .filter(([, voice]) => voice.bus.gain.value > 0.001)
         .map(([name]) => name) : []
@@ -59,6 +62,7 @@ export class StarshipSoundEngine {
     if (this.context?.state === "running") return;
     if (!this.context) this.createGraph();
     await this.context!.resume(); // Called only after a real user gesture.
+    await this.recorded?.load();
     // An enabled sound device is not the same as an accelerating ship:
     // keep propulsion silent until the user previews thrust.
     this.refresh();
@@ -67,6 +71,7 @@ export class StarshipSoundEngine {
   async disable(): Promise<void> {
     if (this.context) {
       this.cancelCues();
+      this.recorded?.stopAll();
       this.scene = "standby";
       this.refresh();
       await this.context.suspend();
@@ -80,6 +85,7 @@ export class StarshipSoundEngine {
 
   setScene(scene: SoundScene): void {
     this.scene = scene;
+    this.recorded?.setThrust(scene === "local", this.controls.intensity);
     this.refresh();
   }
 
@@ -87,16 +93,27 @@ export class StarshipSoundEngine {
   cue(kind: DesignCue): void {
     if (this.context?.state !== "running" || !this.effects) return;
     this.cues++;
+    const real: Partial<Record<DesignCue, "glass" | "thunder" | "car" | "capacitor">> = {
+      "ftl-charge": "capacitor", "ftl-engage": "glass",
+      "jump-engage": "thunder", "jump-arrive": "thunder", "passby": "car"
+    };
+    const recording = real[kind];
+    if (recording) this.recorded?.play(recording, this.controls.intensity);
+    // The synthetic layers remain a restrained sub-bass/field bed; the
+    // recognisable physical transient comes from the decoded recording.
+    if (recording && this.recorded?.status.ready.includes(recording)) return;
     this.effects.cue(kind);
   }
 
   cancelCues(): void {
     this.effects?.stopAll();
+    this.recorded?.stopAll();
   }
 
   async dispose(): Promise<void> {
     this.cancelCues();
     this.effects = null;
+    this.recorded = null;
     const ctx = this.context;
     this.context = null;
     this.master = null;
@@ -120,6 +137,7 @@ export class StarshipSoundEngine {
     master.connect(compressor);
     this.master = master;
     this.effects = new CinematicDriveEffects(ctx, master);
+    this.recorded = new RecordedDriveAudio(ctx, master);
 
     // Deterministic soft noise texture reused by all three propulsion beds.
     const samples = Math.round(ctx.sampleRate * 2);
@@ -201,13 +219,14 @@ export class StarshipSoundEngine {
     const local = this.scene === "local";
     const jump = this.scene === "jump-charge" || this.scene === "jump-transit";
     const gains: Record<"local" | "ftl" | "jump", number> = {
-      local: local ? 0.4 + c.intensity * 0.6 : 0,
+      local: local ? (this.recorded?.status.ready.includes("rumble") ? 0.18 : 0.4) + c.intensity * 0.16 : 0,
       ftl: this.scene === "ftl-cruise" ? 0.5 + c.intensity * 0.45 : 0,
       jump: jump ? (this.scene === "jump-transit" ? 0.45 + c.intensity * 0.38 : 0.62) : 0
     };
     for (const key of ["local", "ftl", "jump"] as const) {
       glide(this.voices[key].bus.gain, gains[key], now, 0.13);
     }
+    this.recorded?.setThrust(this.scene === "local", c.intensity);
     glide(this.voices.local.filter.frequency, 140 + c.intensity * 480, now);
     glide(this.voices.ftl.filter.frequency, 370 + c.intensity * 1400, now);
     glide(this.voices.jump.filter.frequency, 290 + c.evolution * 780, now, 0.18);
