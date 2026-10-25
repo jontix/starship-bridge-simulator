@@ -75,6 +75,8 @@
     <button id="audio-disable" disabled>Mute / Stop</button>
   </section>
 
+  <p id="recorded-status" class="footnote" role="status">This audition uses actual recorded sound effects after running <code>npm run audio:fetch</code>. Without the recordings, only the previous synthetic fallback plays. You can optionally add a CC0 camera-flash recording as <code>capacitor.wav</code>.</p>
+
   <section class="grid" aria-label="Three propulsion audition stations">
     <article data-drive="local">
       <span class="number">01 / IMPULSE</span>
@@ -133,7 +135,7 @@
       <div class="knob"><label for="evolution">Corridor unease <output id="evolution-value">30%</output></label><input id="evolution" type="range" min="0" max="100" value="30"/></div>
     </div>
   </section>
-  <p class="footnote">Start with a low speaker volume: thunder and shattering sounds are deliberately dramatic. Effects are original, browser-generated sample-shaped sound-design mock-ups, not finished location recordings. They have no licensing dependencies, no autoplay and no multiplayer connection. The FTL audition runs 4s charge + 10s cruise; the jump audition runs 6s charge + 15s corridor, followed by arrival. You can interrupt any sequence with its exit control or Mute / Stop.</p>
+  <p class="footnote">Start with a low speaker volume: thunder and shattering sounds are deliberately dramatic. Four real-world CC0/public-domain field/foley recordings are downloaded separately via npm run audio:fetch. Sources and licences are documented in docs/recorded-audio-sources.md. A real camera flash recording is an optional manual addition, no autoplay and no multiplayer connection. The FTL audition runs 4s charge + 10s cruise; the jump audition runs 6s charge + 15s corridor, followed by arrival. You can interrupt any sequence with its exit control or Mute / Stop.</p>
 </main>
 <script type="module" src="/src/soundLab.ts"></script>
 </body>
