@@ -8,4 +8,5 @@ export * from "./universe/registry.js";
 export * from "./universe/orbits.js";
 export * from "./universe/floating-origin.js";
 export * from "./universe/cruise.js";
+export * from "./universe/interstellar.js";
 export * from "./universe/planet-geometry.js";
