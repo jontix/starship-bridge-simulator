@@ -43,6 +43,11 @@ export type StarSystem = {
   galacticPositionLightYears: Vec3;
   epochUnixSeconds: number;
   bodies: readonly CelestialBody[];
+  /** Safe jump arrival is deliberately distinct from initial ship spawn. */
+  interstellarArrival?: {
+    referenceBodyId: string;
+    offsetFromReferenceMeters: Vec3;
+  };
   /** The ship's existing 6DOF state remains LOCAL to this non-rotating, co-moving frame. */
   start: {
     referenceBodyId: string;
