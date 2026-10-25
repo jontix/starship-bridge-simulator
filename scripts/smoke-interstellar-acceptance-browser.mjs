@@ -88,6 +88,16 @@ try {
   });
   await page.goto("http://127.0.0.1:"+webPort,{waitUntil:"domcontentloaded"});
   await page.getByText("Connected · Main Screen").waitFor({timeout:30000});
+  // Review usability: important navigation telemetry must not be buried behind
+  // a permanent paragraph of optical-training text.
+  const opticalHelp = page.locator("details.planet-view-hint");
+  await opticalHelp.waitFor();
+  assert.equal(await opticalHelp.evaluate(el => el.open), false,
+    "Long explanatory optics text must be collapsed by default");
+  await opticalHelp.locator("summary").click();
+  assert.equal(await opticalHelp.evaluate(el => el.open), true,
+    "Explanatory help remains available to keyboard/mouse users");
+  await opticalHelp.locator("summary").click();
 
   // Current ship catalog is readable, but viewing alone never confers Helm authority.
   await page.keyboard.press("g");
