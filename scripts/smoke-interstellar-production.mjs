@@ -12,7 +12,7 @@ const port = 2591;
 const server = spawn(process.execPath, ["packages/server/dist/index.js"], {
   env: { ...process.env, PORT: String(port), BRIDGE_SYSTEM_ID: "aster-reach",
     BRIDGE_TEST_START_EPOCH_SECONDS: String(Date.UTC(2026, 9, 24, 20) / 1000),
-    BRIDGE_TEST_JUMP_TIME_SCALE: "" },
+    BRIDGE_TEST_JUMP_TIME_SCALE: undefined },
   stdio: ["ignore", "pipe", "pipe"],
   detached: process.platform !== "win32"
 });
